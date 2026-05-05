@@ -6,17 +6,11 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { resolve, join } from 'path';
 import { mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'fs';
 import { tmpdir } from 'os';
-import { Registry } from '../../bce/engine/registry.js';
-import { applyCompositionRules, matchRules } from '../../bce/engine/compose.js';
-import { assemblePrompt, assembleHooks, assembleMcpTools, mergeMcpConfig } from '../../bce/engine/assemble.js';
-import { interpolate } from '../../bce/engine/template.js';
-import { validateBehaviors } from '../../bce/engine/validate.js';
-import { resolveBehaviors, resolveParams } from '../../bce/engine/resolve.js';
-import { writeOutput } from '../../bce/engine/writer.js';
-import { runPipeline } from '../../bce/engine/pipeline.js';
-import type { Agent, AgentContext, Behavior, AssembledOutput, CompositionRule } from '../../bce/engine/types.js';
+import { Registry, applyCompositionRules, matchRules, assemblePrompt, assembleHooks, assembleMcpTools, validateBehaviors, resolveBehaviors, resolveParams, writeOutput, runPipeline } from '@swoofer/promptweave';
+import type { Agent, AgentContext, Behavior, AssembledOutput, CompositionRule } from '@swoofer/promptweave/types';
 
-const FIXTURES = resolve(import.meta.dirname, '../fixtures/bce');
+// FIXTURES points to the essaim-new repo root, which contains behaviors/, presets/, compositions/
+const FIXTURES = resolve(import.meta.dirname, '../..');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -247,46 +241,8 @@ describe('writer.ts â€” writeOutput', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// template.ts â€” error catch branch (lines 13-15)
-// ---------------------------------------------------------------------------
-
-describe('template.ts â€” interpolate error paths', () => {
-  it('throws with location when source is provided and template is invalid', () => {
-    // Handlebars strict mode throws when referencing a missing variable
-    expect(() => interpolate('{{missing}}', {}, 'test-source')).toThrow(
-      /Template interpolation failed in test-source.*Available context keys/,
-    );
-  });
-
-  it('throws without location when source is not provided', () => {
-    try {
-      interpolate('{{missing}}', {});
-      expect.unreachable('should have thrown');
-    } catch (err) {
-      const msg = (err as Error).message;
-      expect(msg).toMatch(/Template interpolation failed:/);
-      // When no source is given, the message should NOT contain " in <source>"
-      // right after "failed". The pattern is "failed: <handlebars error>"
-      expect(msg).toMatch(/^Template interpolation failed: /);
-      expect(msg).not.toMatch(/^Template interpolation failed in /);
-    }
-  });
-
-  it('includes available context keys in error message', () => {
-    expect(() => interpolate('{{missing}}', { foo: 1, bar: 2 })).toThrow(
-      /\["foo","bar"\]/,
-    );
-  });
-
-  it('handles non-Error thrown values (String branch of err instanceof Error)', () => {
-    // Handlebars always throws Error objects, but the code handles both cases.
-    // We test the Error path here -- the non-Error path is a defensive measure.
-    // The `err instanceof Error ? err.message : String(err)` line 13 always gets the
-    // Error path from Handlebars, which is sufficient for coverage.
-    expect(() => interpolate('{{#if}}', {})).toThrow(/Template interpolation failed/);
-  });
-});
+// NOTE: interpolate (template.ts) is a promptweave internal, not part of the public API.
+// Those tests belong in the promptweave package, not in essaim. Removed per Task 12.
 
 // ---------------------------------------------------------------------------
 // compose.ts â€” error paths + inject/disable/override_params
@@ -688,52 +644,9 @@ describe('assemble.ts â€” assembleHooks tiebreak and non-blocking', () => {
   });
 });
 
-describe('assemble.ts â€” mergeMcpConfig', () => {
-  it('adds _bce_coordinator when tools are present', () => {
-    const result = mergeMcpConfig({}, ['tool_a'], 'http://localhost:3100');
-    expect(result.mcpServers).toBeDefined();
-    const servers = result.mcpServers as Record<string, any>;
-    expect(servers._bce_coordinator).toEqual({
-      type: 'http',
-      url: 'http://localhost:3100/mcp',
-      _bce_tools: ['tool_a'],
-    });
-  });
-
-  it('removes existing _bce_ prefixed servers', () => {
-    const existing = {
-      mcpServers: {
-        '_bce_old_one': { type: 'http', url: 'old' },
-        '_bce_old_two': { type: 'http', url: 'old2' },
-        'user-server': { type: 'http', url: 'http://user' },
-      },
-    };
-    const result = mergeMcpConfig(existing, ['t1'], 'http://x');
-    const servers = result.mcpServers as Record<string, any>;
-    expect(servers['_bce_old_one']).toBeUndefined();
-    expect(servers['_bce_old_two']).toBeUndefined();
-    expect(servers['user-server']).toBeDefined();
-    expect(servers['_bce_coordinator']).toBeDefined();
-  });
-
-  it('does not add coordinator when tools list is empty', () => {
-    const result = mergeMcpConfig({}, [], 'http://localhost:3100');
-    const servers = result.mcpServers as Record<string, any>;
-    expect(servers._bce_coordinator).toBeUndefined();
-  });
-
-  it('preserves extra top-level keys from existing config', () => {
-    const existing = { mcpServers: {}, otherKey: 'preserved' };
-    const result = mergeMcpConfig(existing, [], 'http://x');
-    expect(result.otherKey).toBe('preserved');
-  });
-
-  it('handles missing mcpServers key in existing config', () => {
-    const result = mergeMcpConfig({}, ['tool'], 'http://localhost:3100');
-    const servers = result.mcpServers as Record<string, any>;
-    expect(servers._bce_coordinator._bce_tools).toEqual(['tool']);
-  });
-});
+// NOTE: mergeMcpConfig is a promptweave internal, not part of the public API.
+// Those tests belong in the promptweave package, not in essaim. Removed per Task 12.
+// The writeOutput function (which wraps mergeMcpConfig) IS tested above via the public API.
 
 // ---------------------------------------------------------------------------
 // compose.ts â€” matchRules 'any' condition branch (line 22)

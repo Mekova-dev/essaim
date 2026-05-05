@@ -1,10 +1,10 @@
 ﻿// tests/unit/bce-parity.test.ts
 import { describe, it, expect } from 'vitest';
 import { resolve } from 'path';
-import { runPipeline } from '../../bce/engine/pipeline.js';
-import type { Agent } from '../../bce/engine/types.js';
+import { runPipeline } from '@swoofer/promptweave';
+import type { Agent } from '@swoofer/promptweave/types';
 
-const BCE_DIR = resolve(import.meta.dirname, '../../bce');
+const BCE_DIR = resolve(import.meta.dirname, '../..');
 
 function buildPreset(preset: string, launchParams: Record<string, Record<string, unknown>> = {}) {
   const agent: Agent = { name: `test-${preset}`, preset, add: [], remove: [], params: {} };
