@@ -4,7 +4,7 @@ import type {
   ThreadMessage,
   CoordinatorEvent,
   ConflictReport,
-} from "../../server/src/types.js";
+} from "mcp-coordinator/types";
 
 describe("Types", () => {
   it("Thread status values are exhaustive", () => {
