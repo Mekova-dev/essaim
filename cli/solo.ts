@@ -14,10 +14,14 @@ export function createSoloCommand(): Command {
     .option("-p, --project <path>", "Target project path", ".")
     .option("-t, --timeout <min>", "Timeout in minutes", "15")
     .option("--set <key=value>", "BCE parameter (repeatable)", collect, [])
+    .option(
+      "--coordinator-url <url>",
+      "Use an external coordinator at this URL instead of starting one in-process",
+    )
     .action(
       (
         template: string | undefined,
-        opts: { project: string; timeout: string; set: string[] },
+        opts: { project: string; timeout: string; set: string[]; coordinatorUrl?: string },
       ) => {
         // List templates if none specified
         const templates = listTemplates();

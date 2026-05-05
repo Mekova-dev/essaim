@@ -4,6 +4,7 @@ import { execSync, ChildProcess } from "child_process";
 import { fileURLToPath } from "url";
 import { resolve } from "path";
 import { createLogger } from "../logger.js";
+import { startServer } from "mcp-coordinator";
 const log = createLogger("orchestrator");
 
 let __filename: string;
@@ -45,6 +46,12 @@ const DEFAULT_BASE = process.cwd(); // default to current working directory
 export interface RunProjectOptions {
   /** Override max quota utilization % for the pre-flight check. */
   maxQuotaPct?: number;
+  /**
+   * Use an external coordinator at this URL instead of starting one in-process.
+   * When omitted, Strategy A: startServer() is called to spin up the broker
+   * in-process and the URL is set to http://localhost:<PORT>.
+   */
+  coordinatorUrl?: string;
 }
 
 export async function runProject(
@@ -52,6 +59,45 @@ export async function runProject(
   mode: "with_coordinator" | "without_coordinator" = "with_coordinator",
   cleanup = false,
   runOpts: RunProjectOptions = {},
+): Promise<RunResult> {
+  // Strategy A: start in-process coordinator unless caller provided an external URL.
+  // startServer() returns Promise<void> — no handle is exposed, so cleanup is
+  // implicit when the process exits. We track whether we started one so the
+  // finally block can log appropriately.
+  let inProcessCoordinatorStarted = false;
+  if (mode === "with_coordinator" && !runOpts.coordinatorUrl) {
+    const port = parseInt(process.env.PORT || "3100", 10);
+    const dataDir = process.env.COORDINATOR_DATA_DIR || "./tmp-essaim/coordinator-data";
+    log.info(`Starting in-process coordinator on port ${port} (dataDir: ${dataDir})`);
+    await startServer({ port, dataDir });
+    runOpts = { ...runOpts, coordinatorUrl: `http://localhost:${port}` };
+    inProcessCoordinatorStarted = true;
+    log.info(`In-process coordinator ready at ${runOpts.coordinatorUrl}`);
+  }
+
+  // Effective coordinator URL for this run: from opts (external or just-started in-process)
+  // or fall back to the env/default for backward-compat with without_coordinator mode.
+  const effectiveCoordinatorUrl = runOpts.coordinatorUrl ?? COORDINATOR_URL;
+
+  try {
+    return await _runProjectBody(project, mode, cleanup, runOpts, effectiveCoordinatorUrl);
+  } finally {
+    if (inProcessCoordinatorStarted) {
+      // startServer() does not expose a .close() handle; the HTTP server is
+      // released when the process exits. For CLI one-shot invocations this is
+      // fine. If long-lived embedding is needed, mcp-coordinator would need to
+      // expose a ServerHandle type from startServer.
+      log.info("In-process coordinator will stop on process exit");
+    }
+  }
+}
+
+async function _runProjectBody(
+  project: MiniProject,
+  mode: "with_coordinator" | "without_coordinator",
+  cleanup: boolean,
+  runOpts: RunProjectOptions,
+  effectiveCoordinatorUrl: string,
 ): Promise<RunResult> {
   const runDir = path.resolve("runs", `${project.id}-${mode}-${Date.now()}`);
   fs.mkdirSync(runDir, { recursive: true });
@@ -66,7 +112,7 @@ export async function runProject(
   const maxQuotaPct = resolveMaxUtilizationPct(runOpts.maxQuotaPct, process.env.MAX_QUOTA_PCT);
   if (mode === "with_coordinator") {
     const preflight = await preflightQuotaCheck({
-      coordinatorUrl: COORDINATOR_URL,
+      coordinatorUrl: effectiveCoordinatorUrl,
       maxUtilizationPct: maxQuotaPct,
     });
     if (!preflight.canProceed) {
@@ -82,7 +128,7 @@ export async function runProject(
 
   // 1. Reset coordinator state
   try {
-    execSync(`curl -s --max-time 2 -X POST "${COORDINATOR_URL}/api/reset" -H "Content-Type: application/json"`, { stdio: "pipe" });
+    execSync(`curl -s --max-time 2 -X POST "${effectiveCoordinatorUrl}/api/reset" -H "Content-Type: application/json"`, { stdio: "pipe" });
     log.info("Coordinator state reset");
   } catch {
     log.warn("Could not reset coordinator");
@@ -100,7 +146,7 @@ export async function runProject(
       timeout_minutes: project.timeout_minutes,
       compare_mode: project.compare_mode,
     });
-    execSync(`curl -s --max-time 2 -X POST "${COORDINATOR_URL}/api/run-config" -H "Content-Type: application/json" -d '${configPayload.replace(/'/g, "'\\''")}'`, { stdio: "pipe" });
+    execSync(`curl -s --max-time 2 -X POST "${effectiveCoordinatorUrl}/api/run-config" -H "Content-Type: application/json" -d '${configPayload.replace(/'/g, "'\\''")}'`, { stdio: "pipe" });
   } catch {}
 
   // 2. Create workspaces (resetBase FIRST, then setup, then worktrees)
@@ -149,7 +195,7 @@ export async function runProject(
     for (const ap of agentProcesses) {
       try { ap.process.kill("SIGKILL"); } catch { /* already gone */ }
     }
-    // agent-loop mode: signal propagates through runAgentLoop â†’ claude-stream,
+    // agent-loop mode: signal propagates through runAgentLoop â†' claude-stream,
     // which SIGKILLs each child and rejects the current send().
     agentLoopAbort.abort();
     if (timeoutReject) timeoutReject();
@@ -167,7 +213,7 @@ export async function runProject(
   if (isCoordinated) {
     for (const agent of project.agents) {
       try {
-        execSync(`curl -s --max-time 2 -X POST "${COORDINATOR_URL}/api/register" -H "Content-Type: application/json" -d '${JSON.stringify({
+        execSync(`curl -s --max-time 2 -X POST "${effectiveCoordinatorUrl}/api/register" -H "Content-Type: application/json" -d '${JSON.stringify({
           agent_id: agent.id,
           name: agent.name,
           modules: [], // will be overridden by agent's announce_work
@@ -182,7 +228,7 @@ export async function runProject(
     let mcpConfigPath: string | null = null;
 
     if (isCoordinated) {
-      mcpConfigPath = writeAgentWorkspace(wsPath, agent, COORDINATOR_URL);
+      mcpConfigPath = writeAgentWorkspace(wsPath, agent, effectiveCoordinatorUrl);
     }
 
     const identityBlock = [
@@ -202,7 +248,7 @@ export async function runProject(
       // Agent-loop mode: programmatic loop with MQTT push.
       // Pass the shared abort signal + deadline so the agent-loop can terminate
       // itself (and SIGKILL its claude children) when the orchestrator times out.
-      const loopPromise = launchAgentLoop(agent, wsPath, COORDINATOR_URL, mcpConfigPath, coordinatorPrompt, {
+      const loopPromise = launchAgentLoop(agent, wsPath, effectiveCoordinatorUrl, mcpConfigPath, coordinatorPrompt, {
         deadlineMs,
         abortSignal: agentLoopAbort.signal,
         maxQuotaPct: agentLoopMaxQuotaPct,
@@ -212,7 +258,7 @@ export async function runProject(
     }
 
     // Legacy mode: claude -p one-shot
-    const proc = launchAgent(agent, wsPath, COORDINATOR_URL, mcpConfigPath, coordinatorPrompt);
+    const proc = launchAgent(agent, wsPath, effectiveCoordinatorUrl, mcpConfigPath, coordinatorPrompt);
     agentProcesses.push({ config: agent, process: proc, workspacePath: wsPath });
     return proc;
   }
@@ -307,7 +353,7 @@ export async function runProject(
 
   // 6. Collect metrics
   const coordinatorMetrics = isCoordinated
-    ? await fetchCoordinatorMetrics(COORDINATOR_URL)
+    ? await fetchCoordinatorMetrics(effectiveCoordinatorUrl)
     : {
         agents_count: project.agents.length,
         duration_total_ms: duration,

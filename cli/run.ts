@@ -1,6 +1,5 @@
 ﻿import { Command } from "commander";
 import { resolve } from "path";
-import { execSync } from "child_process";
 import { scanProject } from "../src/orchestrator/scanner.js";
 import {
   buildProject,
@@ -21,7 +20,11 @@ export function createRunCommand(): Command {
     .option("--cleanup", "Remove worktrees after execution")
     .option("--dry-run", "Preview agents and prompts without launching")
     .option("--set <key=value>", "BCE parameter (repeatable)", collect, [])
-    .option("--url <url>", "Coordinator URL (override config)")
+    .option("--url <url>", "Coordinator URL (override config, deprecated: use --coordinator-url)")
+    .option(
+      "--coordinator-url <url>",
+      "Use an external coordinator at this URL instead of starting one in-process",
+    )
     .option("--base-ref <ref>", "Git ref for worktree snapshot (tag, branch, sha) â€” use for sandbox testing against a fixed codebase")
     .option("--max-quota-pct <pct>", "Abort pre-flight if Anthropic quota utilization is at/above this % (default 95, also reads MAX_QUOTA_PCT env)")
     .action(
@@ -35,6 +38,7 @@ export function createRunCommand(): Command {
           dryRun?: boolean;
           set: string[];
           url?: string;
+          coordinatorUrl?: string;
           baseRef?: string;
           maxQuotaPct?: string;
         },
@@ -84,21 +88,16 @@ export function createRunCommand(): Command {
 
         const setParams = parseSetParams(opts.set);
 
-        // Check coordinator is reachable (skip for dry-run)
-        if (!opts.dryRun) {
-          const config = loadConfig();
-          const coordinatorUrl = opts.url ?? process.env.COORDINATOR_URL ?? config.defaults.coordinator_url;
-          try {
-            execSync(`curl -s --max-time 3 ${coordinatorUrl}/health`, {
-              stdio: "pipe",
-            });
-          } catch {
-            console.error(
-              `Coordinator not reachable at ${coordinatorUrl}. Run: essaim server start`,
-            );
-            process.exit(1);
-          }
-        }
+        // Resolve coordinator URL: --coordinator-url > --url > COORDINATOR_URL env.
+        // When none is set explicitly, runProject will start an in-process
+        // coordinator (Strategy A). The loadConfig() default is intentionally
+        // excluded here so that bare `essaim run` triggers Strategy A rather
+        // than assuming an external server at localhost:3100.
+        loadConfig(); // ensure config warning is shown (side-effect only)
+        const resolvedCoordinatorUrl =
+          opts.coordinatorUrl ??
+          opts.url ??
+          process.env.COORDINATOR_URL;
 
         // Build project
         const project = buildProject(template, context, {
@@ -142,9 +141,13 @@ export function createRunCommand(): Command {
           opts.cleanup,
           {
             maxQuotaPct: opts.maxQuotaPct ? Number(opts.maxQuotaPct) : undefined,
+            coordinatorUrl: resolvedCoordinatorUrl,
           },
         );
         writeReport([result], "reports");
+        // Force exit to release the in-process coordinator's HTTP server
+        // (startServer does not expose a .close() handle).
+        process.exit(0);
       },
     );
 }
