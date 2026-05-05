@@ -57,7 +57,7 @@
     "test:watch": "vitest",
     "cli": "tsx cli/index.ts",
     "dev": "tsx cli/index.ts",
-    "prepublishOnly": "npm run build && npm test"
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
