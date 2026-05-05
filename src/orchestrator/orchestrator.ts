@@ -17,7 +17,7 @@ import type { AgentConfig, MiniProject, AgentProcess, RunResult } from "./types.
 import { scanProject } from "./scanner.js";
 import { buildProject, listTemplates } from "./template-engine.js";
 
-import { BCE_DIR, BCE_SCRIPTS_DIR } from "../../cli/paths-stub.js";
+import { getCatalogRoot, getScriptsDir } from "../../cli/bce-resolver.js";
 import { runPipeline } from "@swoofer/promptweave";
 import { preflightQuotaCheck, resolveMaxUtilizationPct } from "./preflight.js";
 
@@ -31,7 +31,7 @@ const CLAUDE_HOOK_EVENT_MAP: Record<string, string> = {
 const POST_TOOL_USE_MATCHER = "Edit|Write|NotebookEdit";
 
 function readBceAsset(relativePath: string): string {
-  return readFileSync(resolve(BCE_DIR, relativePath), 'utf-8');
+  return readFileSync(resolve(getCatalogRoot(), relativePath), 'utf-8');
 }
 
 const COORDINATOR_URL = process.env.COORDINATOR_URL || "http://localhost:3100";
@@ -404,7 +404,7 @@ export function writeClaudeHooksDir(params: {
   const writtenFiles: string[] = [];
   const writtenHookFiles: Record<string, string> = {};
   for (const [lifecycle, script] of Object.entries(hooks)) {
-    const resolvedScript = script.replace(/\$BCE_SCRIPTS_DIR/g, BCE_SCRIPTS_DIR);
+    const resolvedScript = script.replace(/\$BCE_SCRIPTS_DIR/g, getScriptsDir());
     const filename = `${lifecycle}.sh`;
     const hookPath = path.join(hooksDir, filename);
     fs.writeFileSync(hookPath, resolvedScript, { mode: 0o755 });
@@ -477,7 +477,7 @@ export function setupProject(projectPath: string, options: SetupOptions): void {
     remove: [] as string[],
     params: {} as Record<string, Record<string, unknown>>,
   };
-  const result = runPipeline(bceAgent, BCE_DIR, launchParams);
+  const result = runPipeline(bceAgent, getCatalogRoot(), launchParams);
 
   // 2. Merge BCE envVars with init-time values
   const envVars: Record<string, string> = {

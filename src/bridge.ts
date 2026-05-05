@@ -37,7 +37,7 @@ interface BceMiniProject {
   compare_mode: boolean;
 }
 
-import { BCE_DIR } from "../cli/paths-stub.js";
+import { getCatalogRoot } from "../cli/bce-resolver.js";
 
 // Template definitions map template IDs to BCE presets + orchestration config
 interface TemplateDefinition {
@@ -293,7 +293,7 @@ export function buildProjectFromBce(
         remove: [],
         params: {},
       };
-      const result = runPipeline(agent, BCE_DIR, launchParams);
+      const result = runPipeline(agent, getCatalogRoot(), launchParams);
 
       agents.push({
         id: agentId,
@@ -362,7 +362,7 @@ export function buildSoloPrompt(
     remove: [] as string[],
     params: {} as Record<string, Record<string, unknown>>,
   };
-  const result = runPipeline(agent, BCE_DIR, launchParams);
+  const result = runPipeline(agent, getCatalogRoot(), launchParams);
   return result.output.prompt;
 }
 
