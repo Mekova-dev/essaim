@@ -1,0 +1,20 @@
+name: relais-3
+description: "Course de relais — Coureur 3: finition et validation (arrivée)"
+profile: codeur
+behaviors:
+  - project-context
+  - coordinator-rules
+  - announce-before-write
+  - check-interrupt
+  - conflict-resolution
+  - activity-tracking
+  - worktree-isolation
+  - sequential-wait
+  - relay-runner
+params:
+  relay-runner:
+    step: 3
+    step_name: "Finition et validation"
+    focus: "Assure la cohérence du style, ajoute la documentation, vérifie les edge cases, lance et corrige les tests."
+  sequential-wait:
+    predecessor_description: "Coureur 2 (amélioration architecturale)"

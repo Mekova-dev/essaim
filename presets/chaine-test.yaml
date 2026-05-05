@@ -1,0 +1,12 @@
+name: chaine-test
+description: "Pipeline séquentiel — étape 3: tests"
+profile: codeur
+behaviors:
+  - project-context
+  - coordinator-rules
+  - announce-before-write
+  - check-interrupt
+  - activity-tracking
+  - worktree-isolation
+  - sequential-wait
+  - sequential-test

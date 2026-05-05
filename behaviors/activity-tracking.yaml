@@ -1,0 +1,22 @@
+name: activity-tracking
+description: "Log actions and track file modifications via coordinator"
+category: coordination
+
+requires:
+  infrastructure: [mcp-coordinator]
+
+sections:
+  "050-logging":
+    prompt: |
+      ## Suivi d'activité
+      - Le hook post-tool-use log automatiquement chaque appel d'outil.
+      - Appelle log_action_summary seulement pour documenter une décision importante
+        ou une étape-clé (ex: "bug validé, patch prêt"). Pas besoin après chaque Read.
+
+hooks:
+  post-tool-use:
+    script: track_activity.sh
+    blocking: false
+    order: 50
+
+mcp_tools: [log_action_summary]

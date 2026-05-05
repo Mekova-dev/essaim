@@ -1,0 +1,12 @@
+name: chaine-review
+description: "Pipeline séquentiel — étape 2: review"
+profile: communicant
+behaviors:
+  - project-context
+  - coordinator-rules
+  - check-interrupt
+  - activity-tracking
+  - worktree-isolation
+  - sequential-wait
+  - read-only-mode
+  - sequential-review

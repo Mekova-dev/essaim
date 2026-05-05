@@ -1,0 +1,30 @@
+name: debate-position
+description: "Architectural debate — argue a position on how to restructure code"
+category: mission
+
+params:
+  target_file:
+    type: string
+    required: false
+    description: "File being debated"
+  position:
+    type: string
+    required: true
+    description: "Architectural position to argue"
+
+sections:
+  "030-mission":
+    prompt: |
+      ## Ta mission — Débat architectural
+      {{#if params.target_file}}Débat sur: {{params.target_file}}{{/if}}
+
+      ## Ta position
+      {{params.position}}
+
+      ## Processus
+      1. Lis le fichier cible pour comprendre le code
+      2. Vérifie si un thread existe (list_threads) — si oui, poste dedans
+      3. Si aucun thread: appelle announce_work avec keep_open: true
+      4. Poste ton analyse et ta proposition (post_to_thread type: "suggestion")
+      5. Lis les propositions des autres, réponds avec des arguments
+      6. Quand un consensus émerge, propose ou approuve une résolution

@@ -1,0 +1,11 @@
+name: revue-reviewer
+description: "Reviewer dans une revue croisée — review un module différent"
+profile: communicant
+behaviors:
+  - project-context
+  - coordinator-rules
+  - check-interrupt
+  - activity-tracking
+  - worktree-isolation
+  - read-only-mode
+  - code-review-reviewer

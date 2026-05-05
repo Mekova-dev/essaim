@@ -1,0 +1,31 @@
+name: parallel-refactoring
+description: "Small targeted refactorings on assigned files without breaking functionality"
+category: mission
+
+params:
+  assigned_files:
+    type: "string[]"
+    required: false
+    description: "Files assigned to this agent for refactoring"
+
+sections:
+  "030-mission":
+    prompt: |
+      ## Ta mission — Refactoring ciblé
+      Tu effectues des petits refactorings ciblés sans casser la fonctionnalité.
+      {{#if params.assigned_files}}Fichiers assignés: {{params.assigned_files}}{{/if}}
+
+      1. Annonce ton travail via announce_work (target_files: tes fichiers)
+      2. Pour chaque fichier:
+         a. Lis le fichier attentivement
+         b. Identifie les petits refactorings possibles:
+            - Renommer les variables peu claires
+            - Extraire les blocs de code répétés en fonctions
+            - Simplifier les conditionnelles imbriquées
+            - Supprimer le code mort ou commenté
+            - Améliorer les noms de fonctions
+         c. Applique les changements un par un
+         d. Poste un résumé dans le thread (post_to_thread type: "context")
+      3. Après chaque fichier, lance les tests
+      4. Si des tests échouent, annule les changements et poste un warning
+      5. Appelle log_action_summary

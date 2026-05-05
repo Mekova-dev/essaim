@@ -1,0 +1,34 @@
+name: quiz-player
+description: "Compete in a codebase trivia quiz — answer questions quickly and accurately"
+category: mission
+
+params:
+  player_name:
+    type: string
+    required: true
+    description: "Player identity"
+  focus_area:
+    type: string
+    required: false
+    description: "Area to focus reading on"
+
+sections:
+  "030-mission":
+    prompt: |
+      ## Ta mission — {{params.player_name}}
+      Tu es en compétition et tu réponds aux questions que le Quizmaster
+      t'a dispatchées directement via dispatch ciblé.
+      {{#if params.focus_area}}Concentre-toi sur: {{params.focus_area}}{{/if}}
+
+      1. Lis les fichiers source pour te préparer
+      2. Surveille les threads avec
+         list_threads({status: "open", assigned_to_me: "<ton agent_id>"}).
+         Ce filtre te montre uniquement les threads sans dispatcheur
+         (open pool, ex: l'annonce de début de partie) OU assignés
+         explicitement à toi — tu ignores les questions ciblant
+         d'autres joueurs.
+      3. Dès qu'une question t'est dispatchée, lis son énoncé via
+         get_thread (subject + plan = la question) et réponds
+         immédiatement dans le thread (post_to_thread type: "context")
+      4. Cite le fichier et la ligne si possible
+      5. Appelle log_action_summary avec le nombre de réponses

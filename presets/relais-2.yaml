@@ -1,0 +1,20 @@
+name: relais-2
+description: "Course de relais — Coureur 2: amélioration architecturale (milieu)"
+profile: codeur
+behaviors:
+  - project-context
+  - coordinator-rules
+  - announce-before-write
+  - check-interrupt
+  - conflict-resolution
+  - activity-tracking
+  - worktree-isolation
+  - sequential-wait
+  - relay-runner
+params:
+  relay-runner:
+    step: 2
+    step_name: "Amélioration architecturale"
+    focus: "Extrais des fonctions et modules, améliore la séparation des responsabilités, réduis la complexité cyclomatique, améliore la gestion des erreurs."
+  sequential-wait:
+    predecessor_description: "Coureur 1 (nettoyage initial)"

@@ -1,0 +1,15 @@
+name: carrefour
+description: "Test de détection de conflits — agents sur les mêmes fichiers"
+profile: codeur
+behaviors:
+  - project-context
+  - coordinator-rules
+  - announce-before-write
+  - check-interrupt
+  - conflict-resolution
+  - activity-tracking
+  - worktree-isolation
+  - conflict-test
+params:
+  conflict-test:
+    approach: "Améliorer la lisibilité et la structure du code"

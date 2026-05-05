@@ -1,0 +1,46 @@
+﻿name: swarm
+description: “Refactoring en essaim — discovery + work-stealing”
+profile: codeur
+behaviors:
+  - project-context
+  - coordinator-rules
+  - announce-before-write
+  - conflict-resolution
+  - activity-tracking
+  - worktree-isolation
+  - phase-discover
+  - phase-review
+  - phase-execute
+
+params:
+  phase-discover:
+    discovery_mission: >
+      Identifie le code dupliquÃ©, les abstractions manquantes, les
+      fonctions trop longues, les violations de principes SOLID, et
+      le code mort.
+
+      ðŸŽ¯ SCOPE STRICT â€” cherche UNIQUEMENT dans le code source sous
+      `src/` (et `lib/` s'il existe). Le reste du dÃ©pÃ´t (tests/, docs/,
+      bce/, cli/, dashboard/, bin/) est HORS-SUJET. Si tu lis ailleurs
+      que `src/`/`lib/`, tu gaspilles ton budget de tours.
+    effort: low
+  phase-review:
+    review_mission: >
+      Compare tes opportunitÃ©s de refactoring avec les threads existants.
+      MÃªme fichier + mÃªme pattern = probable doublon.
+      Si tu proposes une approche diffÃ©rente pour le mÃªme refactoring, enrichis le thread.
+    effort: low
+  phase-execute:
+    execute_mission: >
+      Effectue le refactoring identifiÃ©. VÃ©rifie que les tests passent
+      aprÃ¨s chaque modification. Ne change pas le comportement externe.
+
+      ðŸŽ¯ SCOPE STRICT â€” tu ne modifies QUE le fichier cible mentionnÃ©
+      dans la tÃ¢che et le code source associÃ© sous `src/`. Le reste du
+      dÃ©pÃ´t (tests/, docs/, bce/, cli/, dashboard/, bin/) est HORS-SUJET.
+      Ne spawne AUCUN sous-agent.
+    # Sonnet (mid) est suffisant pour un refactoring ciblÃ© â€” Ã  "high"
+    # (Opus), l'agent dÃ©pensait son budget en exploration avant d'atteindre
+    # DONE. Sonnet + scope strict ci-dessus = moins d'excursions.
+    effort: mid
+

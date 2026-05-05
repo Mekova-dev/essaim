@@ -1,0 +1,45 @@
+name: melee
+description: "Écriture de tests en parallèle — discovery + work-stealing"
+profile: codeur
+behaviors:
+  - project-context
+  - coordinator-rules
+  - announce-before-write
+  - conflict-resolution
+  - activity-tracking
+  - worktree-isolation
+  - phase-discover
+  - phase-review
+  - phase-execute
+
+params:
+  phase-discover:
+    discovery_mission: >
+      Identifie les fonctions non testées, les branches non couvertes,
+      et les edge cases manquants dans les tests existants.
+
+      🎯 SCOPE STRICT — cherche UNIQUEMENT dans `tests/` (les fichiers
+      de test vivent dans `tests/unit/` ; le reste de `tests/` sert de
+      contexte de référence). Le code d'implémentation (server/,
+      client/, bce/, cli/, dashboard/) est HORS-SUJET. Si tu lis
+      ailleurs que `tests/`, tu gaspilles ton budget de tours.
+    effort: low
+  phase-review:
+    review_mission: >
+      Compare tes tests manquants avec les threads existants.
+      Si un autre agent a déjà identifié le même test manquant, marque DOUBLON.
+      Si tu as un cas de test complémentaire, enrichis le thread.
+    effort: low
+  phase-execute:
+    execute_mission: >
+      Écris le test manquant. Assure-toi qu'il passe (green test).
+      Utilise le framework de test du projet.
+
+      🎯 SCOPE STRICT — tu n'écris QUE dans `tests/unit/` et tu ne lis
+      QUE le fichier cible mentionné dans la tâche. Le reste du dépôt
+      (server/, client/, bce/, cli/, dashboard/, autres fichiers sous
+      tests/) est HORS-SUJET. Ne spawne AUCUN sous-agent.
+    # Sonnet (mid) est suffisant pour écrire un test manquant — à "high"
+    # (Opus), l'agent dépensait son budget en exploration avant d'atteindre
+    # DONE. Sonnet + scope strict ci-dessus = moins d'excursions.
+    effort: mid

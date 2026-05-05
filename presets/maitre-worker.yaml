@@ -1,0 +1,11 @@
+name: maitre-worker
+description: "Worker — exécute les tâches assignées par le lead"
+profile: codeur
+behaviors:
+  - project-context
+  - coordinator-rules
+  - announce-before-write
+  - check-interrupt
+  - activity-tracking
+  - worktree-isolation
+  - task-execution

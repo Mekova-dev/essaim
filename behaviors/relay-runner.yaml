@@ -1,0 +1,33 @@
+name: relay-runner
+description: "Relay race refactoring — run one leg of a sequential improvement relay"
+category: mission
+
+params:
+  step:
+    type: number
+    required: true
+    description: "Runner step number (1, 2, or 3)"
+  step_name:
+    type: string
+    required: true
+    description: "Name of this step"
+  focus:
+    type: string
+    required: true
+    description: "What this runner focuses on"
+
+sections:
+  "030-mission":
+    prompt: |
+      ## Ta mission — Coureur {{params.step}}/3 ({{params.step_name}})
+      {{params.focus}}
+
+      1. Annonce ton départ via announce_work (subject: "Relais étape {{params.step}} — {{params.step_name}}")
+      2. Lis les fichiers source et applique tes améliorations
+      3. Lance les tests après chaque changement
+      4. Documente ce que tu as fait via post_to_thread (type: "context"):
+         - Fichiers modifiés
+         - Nature de chaque changement
+         - Points laissés pour le coureur suivant
+      5. Propose une résolution pour signaler la fin de ton étape
+      6. Appelle log_action_summary

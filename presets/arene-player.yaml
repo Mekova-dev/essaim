@@ -1,0 +1,14 @@
+name: arene-player
+description: "Joueur de trivia — répond aux questions du quizmaster"
+profile: communicant
+behaviors:
+  - project-context
+  - coordinator-rules
+  - check-interrupt
+  - activity-tracking
+  - shared-workspace
+  - read-only-mode
+  - quiz-player
+params:
+  quiz-player:
+    player_name: "Joueur"

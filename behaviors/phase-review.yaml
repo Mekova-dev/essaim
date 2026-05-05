@@ -1,0 +1,98 @@
+name: phase-review
+description: "Review phase — compare discoveries against existing threads, deduplicate, and enrich. No file modifications."
+category: mission
+
+phase:
+  name: review
+  tools_mode: none
+
+params:
+  review_mission:
+    type: string
+    required: true
+    description: "How to compare findings — injected by the preset"
+  existing_threads:
+    type: string
+    required: false
+    default: ""
+    description: "Injected at runtime by the agent-loop with existing coordinator threads"
+  my_discoveries:
+    type: string
+    required: false
+    default: ""
+    description: "Injected at runtime by the agent-loop with this agent's raw discoveries"
+  effort:
+    type: string
+    default: low
+    description: "Effort profile (low/mid/high/max/auto). Defaults to low — review is text comparison."
+  model:
+    type: string
+    default: ""
+    description: "Override model explicitly. Empty = use model from effort profile."
+  thinking:
+    type: string
+    default: ""
+    description: "Override thinking level (none/think/think-hard/ultrathink). Empty = use thinking from effort profile."
+  maxTurns:
+    type: number
+    required: false
+    description: "Override maxTurns explicitly. Omit to use maxTurns from effort profile."
+
+sections:
+  "035-review":
+    prompt: |
+      ## Phase Review — Déduplication et enrichissement
+
+      {{params.review_mission}}
+
+      ⚠️ BUDGET STRICT — Cette phase est une comparaison de TEXTE PUR :
+      - N'appelle AUCUN outil (pas de Read, Grep, Bash, list_threads).
+      - Tout ce dont tu as besoin est dans la section "DATA À ANALYSER" en bas.
+      - Si tu explores au lieu de comparer, tu épuises ton budget et ne produis pas la liste finale.
+
+      Critères de doublon :
+      - Même fichier ET même zone de code (±10 lignes) = DOUBLON probable
+      - Même fichier ET même type de bug = vérifier manuellement
+      - Fichiers différents = probablement NOUVEAU
+
+      Critères d'enrichissement :
+      - Même bug vu sous un angle différent (ex: cause vs symptôme)
+      - Contexte additionnel utile (ex: "ce bug cause aussi X")
+
+      Pour CHAQUE trouvaille dans DATA À ANALYSER, décide d'exactement UNE action :
+      - NOUVEAU | <description complète avec fichier:ligne>
+      - DOUBLON | <thread_id du doublon>
+      - ENRICHIT | <thread_id> | <contexte additionnel à ajouter>
+
+      🚨 FORMAT OBLIGATOIRE — Ta réponse finale (texte pur, sans outil) :
+      ```
+      REVIEW:
+      NOUVEAU | ...
+      DOUBLON | ...
+      ENRICHIT | ... | ...
+      ```
+
+      Si tu n'as aucune action à produire, écris quand même :
+      ```
+      REVIEW:
+      (aucune action)
+      ```
+
+      🚨 CRITIQUE : Sans "REVIEW:" dans ta réponse, le raid utilise un fallback imparfait.
+      Ne finis JAMAIS sans ce marqueur.
+
+      ## DATA À ANALYSER
+
+      Note: tout le contenu statique est au-dessus pour maximiser le cache hit.
+      Seules les deux sections ci-dessous changent entre les cycles de re-discover.
+
+      ### Tes trouvailles (de la phase discovery)
+      {{params.my_discoveries}}
+
+      ### Threads déjà ouverts par d'autres agents
+      {{params.existing_threads}}
+
+mcp_tools:
+  - list_threads
+  - get_thread
+  - post_to_thread

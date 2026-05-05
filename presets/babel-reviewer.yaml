@@ -1,0 +1,14 @@
+name: babel-reviewer
+description: "Réviseur de traductions"
+profile: communicant
+behaviors:
+  - project-context
+  - coordinator-rules
+  - check-interrupt
+  - activity-tracking
+  - worktree-isolation
+  - sequential-wait
+  - translation-review
+params:
+  translation-review:
+    target_language: "français"

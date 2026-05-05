@@ -1,0 +1,17 @@
+name: solo-mode-strip
+description: "Strip multi-agent coordination when running solo — disables announce, conflict resolution"
+priority: 10
+when:
+  all: [coordinator-rules]
+  params_match:
+    coordinator-rules:
+      solo_mode: true
+actions:
+  disable_behaviors: [announce-before-write, conflict-resolution]
+  override_sections:
+    - behavior: coordinator-rules
+      section: "005-coordination-rules"
+      prompt: |
+        ## Coordination
+        Tu travailles seul sur ce projet. Pas d'annonce ni de consultation nécessaire.
+        Appelle log_action_summary après chaque action significative.

@@ -1,0 +1,52 @@
+name: announce-before-write
+description: "Announce intentions before modifying code — wait for conflict resolution"
+category: coordination
+
+# Scope: only inject in phases that can actually write code. In read-only phases
+# (discover, review) this behavior's instructions would waste the agent's turn
+# budget on redundant announce_work / wait_for_peers calls — the agent-loop
+# already auto-announces work at boot, and the coordinator state is observable
+# via list_threads from any phase.
+applies_when:
+  phase_tools_mode: [full]
+
+requires:
+  behaviors: [coordinator-rules]
+  infrastructure: [mcp-coordinator]
+conflicts_with: [silent-mode]
+suggests: [conflict-resolution]
+
+params:
+  announce_threshold:
+    type: number
+    default: 1
+    required: false
+    description: "Minimum files before announcing"
+
+sections:
+  "015-wait-for-peers":
+    prompt: |
+      ## Synchronisation avec les autres agents
+      AVANT ton tout premier `announce_work`, appelle :
+      `wait_for_peers(agent_id=<ton id>, min_peers=1, timeout_seconds=30)`
+
+      Ça attend qu'au moins un autre agent soit en ligne. Sans ça, ton
+      announce part dans le vide — l'impact scorer ne trouve aucun pair
+      concerné (parce qu'ils n'ont pas encore annoncé leurs modules)
+      et ton thread s'auto-resolve instantanément, ratant la coordination
+      croisée. **Tu ne fais ce wait qu'une seule fois, pas avant chaque
+      announce.**
+
+  "020-before-coding":
+    prompt: |
+      ## Avant de coder
+      AVANT de modifier du code, appelle announce_work avec:
+      - subject: description courte du travail
+      - plan (optionnel): ton approche d'implémentation
+      - target_modules: modules que tu vas toucher
+      - target_files: fichiers que tu vas modifier
+      - depends_on_files (optionnel): fichiers dont tu dépends
+      Attends le résultat — si la consultation est "open", d'autres agents vont répondre.
+      Attends les réponses avant de commencer à coder.
+
+mcp_tools: [announce_work, post_to_thread, wait_for_peers, list_threads, get_thread_updates]

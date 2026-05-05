@@ -1,0 +1,12 @@
+name: arene-quizmaster
+description: "Quizmaster — organise un quiz sur la base de code"
+profile: communicant
+behaviors:
+  - project-context
+  - coordinator-rules
+  - announce-before-write
+  - check-interrupt
+  - activity-tracking
+  - shared-workspace
+  - read-only-mode
+  - quiz-master

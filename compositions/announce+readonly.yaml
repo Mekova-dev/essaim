@@ -1,0 +1,16 @@
+name: announce-readonly-adaptation
+description: "Adapt announce wording for read-only agents — say 'avant ton analyse' not 'avant de modifier du code'"
+priority: 11
+when:
+  all: [announce-before-write, read-only-mode]
+actions:
+  override_sections:
+    - behavior: announce-before-write
+      section: "020-before-coding"
+      prompt: |
+        ## Avant de commencer
+        AVANT de commencer ton analyse, appelle announce_work avec:
+        - subject: description courte de ton analyse
+        - target_modules: modules que tu vas analyser
+        - target_files: fichiers que tu vas lire
+        Attends le résultat — si la consultation est "open", d'autres agents vont répondre.

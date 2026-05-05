@@ -1,0 +1,17 @@
+name: relais-1
+description: "Course de relais — Coureur 1: nettoyage initial (départ)"
+profile: codeur
+behaviors:
+  - project-context
+  - coordinator-rules
+  - announce-before-write
+  - check-interrupt
+  - conflict-resolution
+  - activity-tracking
+  - worktree-isolation
+  - relay-runner
+params:
+  relay-runner:
+    step: 1
+    step_name: "Nettoyage initial"
+    focus: "Supprime la duplication, clarifie les noms de variables, retire les imports inutilisés et les commentaires obsolètes."

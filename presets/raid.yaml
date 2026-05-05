@@ -1,0 +1,48 @@
+name: raid
+description: "Bug hunting coordonné en parallèle — discovery + work-stealing"
+profile: codeur
+behaviors:
+  - project-context
+  - coordinator-rules
+  - announce-before-write
+  - conflict-resolution
+  - activity-tracking
+  - worktree-isolation
+  - phase-discover
+  - phase-review
+  - phase-execute
+
+params:
+  phase-discover:
+    discovery_mission: >
+      Cherche les bugs, edge cases manquants, erreurs de logique, valeurs
+      nulles/undefined non gérées, problèmes de concurrence, conditions
+      limites dans les boucles, et gestion d'exceptions incorrecte.
+
+      🎯 SCOPE STRICT — cherche UNIQUEMENT dans `tests/sandbox/src/`. Le
+      reste du dépôt (server/, client/, bce/, cli/, dashboard/) est
+      HORS-SUJET. Si tu lis ailleurs que tests/sandbox/, tu gaspilles ton
+      budget de tours.
+    # Sonnet + think — plus décisif sur "quand stopper l'exploration" et
+    # produit des discoveries mieux ciblées que Haiku pour ce type de chasse aux bugs.
+    effort: mid
+  phase-review:
+    review_mission: >
+      Compare tes trouvailles de bugs avec les threads existants.
+      Même fichier + même zone de code = probable doublon.
+      Si tu trouves un angle différent sur le même bug, enrichis le thread existant.
+    effort: low
+  phase-execute:
+    execute_mission: >
+      Écris un test qui expose le bug. Le test doit ÉCHOUER pour prouver
+      que le bug existe. Inclus un commentaire décrivant le comportement
+      attendu vs le comportement actuel.
+
+      🎯 SCOPE STRICT — tu ne lis et ne modifies QUE les fichiers sous
+      `tests/sandbox/` (pour comprendre le bug) et `tests/unit/` (pour
+      y écrire le test). Le reste du dépôt (server/, client/, bce/,
+      cli/, dashboard/) est HORS-SUJET. Ne spawne AUCUN sous-agent.
+    # Sonnet (mid) est suffisant pour écrire un test failing — précédemment
+    # à "high" (Opus), l'agent dépensait son budget en exploration avant
+    # d'atteindre DONE. Sonnet + scope strict ci-dessus = moins d'excursions.
+    effort: mid

@@ -1,0 +1,58 @@
+name: phase-execute
+description: "Execute phase — implement one task at a time from the shared pool. Work-stealing loop."
+category: mission
+
+phase:
+  name: execute
+  tools_mode: full
+  loop: true
+
+params:
+  execute_mission:
+    type: string
+    required: true
+    description: "What to do with each task — injected by the preset"
+  current_task:
+    type: string
+    required: false
+    default: ""
+    description: "Injected at runtime by the agent-loop with the specific task details"
+  effort:
+    type: string
+    default: high
+    description: "Effort profile (low/mid/high/max/auto). Defaults to high — execute needs code writing capability."
+  model:
+    type: string
+    default: ""
+    description: "Override model explicitly. Empty = use model from effort profile."
+  thinking:
+    type: string
+    default: ""
+    description: "Override thinking level (none/think/think-hard/ultrathink). Empty = use thinking from effort profile."
+  maxTurns:
+    type: number
+    required: false
+    description: "Override maxTurns explicitly. Omit to use maxTurns from effort profile. Note: phase-execute's maxTurns override is deliberately ignored at runtime because per-task severity upgrades drive the turn budget."
+
+sections:
+  "030-execute":
+    prompt: |
+      ## Tâche assignée
+
+      {{params.execute_mission}}
+
+      {{#if params.current_task}}
+      Détails de la tâche:
+      {{params.current_task}}
+      {{/if}}
+
+      Consignes:
+      - Cette tâche est NOUVELLE et UNIQUE. Ne réfère pas à des travaux précédents.
+      - Lis le fichier mentionné, comprends le bug, écris le code correctif ou le test.
+      - Chaque tâche nécessite son PROPRE commit avec un message descriptif.
+      - Utilise les outils (Read, Edit, Write, Bash) pour implémenter.
+      - NE DIS PAS "déjà fait" — chaque tâche est un problème distinct.
+      - Quand c'est fini, dis "DONE: <résumé d'une phrase de CE QUE TU AS FAIT>"
+
+mcp_tools:
+  - log_action_summary

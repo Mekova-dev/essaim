@@ -1,0 +1,30 @@
+name: conflict-test
+description: "Intentionally work on shared files to test conflict detection"
+category: mission
+
+params:
+  shared_files:
+    type: "string[]"
+    required: false
+    description: "Files shared with other agents"
+  approach:
+    type: string
+    required: true
+    description: "Improvement approach to argue for"
+
+sections:
+  "030-mission":
+    prompt: |
+      ## Ta mission — Test de conflits
+      Tu travailles sur les MÊMES fichiers que les autres agents. C'est un test de détection.
+      {{#if params.shared_files}}Fichiers partagés: {{params.shared_files}}{{/if}}
+
+      ## Ton approche
+      {{params.approach}}
+
+      1. Annonce ton travail via announce_work (target_files: fichiers partagés)
+      2. Le coordinator va détecter un conflit — c'est ATTENDU
+      3. Participe à la consultation (post_to_thread type: "suggestion")
+      4. Explique ton approche et pourquoi elle est meilleure
+      5. Écoute les arguments des autres, ajuste si nécessaire
+      6. SEULEMENT après résolution, implémente les changements convenus

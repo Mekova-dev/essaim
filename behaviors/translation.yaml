@@ -1,0 +1,39 @@
+name: translation
+description: "Translate project documentation to target language"
+category: mission
+
+params:
+  target_language:
+    type: string
+    required: true
+    description: "Target language for translation"
+
+sections:
+  "030-mission":
+    prompt: |
+      ## Ta mission — Traduction
+      Traduis la documentation vers {{params.target_language}}, puis
+      dispatche la révision à UN reviewer précis (pas d'attente qu'un
+      reviewer devine via subject).
+
+      1. Annonce ton travail via announce_work
+         (subject: "Traduction documentation → {{params.target_language}}")
+      2. Lis README.md et les autres fichiers .md
+      3. Pour chaque fichier:
+         a. Traduis en préservant la structure Markdown
+         b. Ne traduis PAS le code, les commandes ou les noms de variables
+         c. Crée le fichier traduit (ex: README.fr.md)
+         d. Poste un résumé dans le thread
+      4. Quand toutes les traductions sont prêtes, dispatche la review
+         à un reviewer précis :
+         - Récupère la liste des reviewers online via list_agents
+           (filtre ceux qui ne sont pas toi).
+         - Appelle announce_work AVEC le paramètre
+           `assigned_to: "<agent_id du reviewer cible>"` :
+           - subject : "Review translation of <doc> → {{params.target_language}}"
+           - plan : liste des fichiers traduits + points d'attention
+           - target_files : les fichiers traduits (ex: README.fr.md)
+           - assigned_to : l'agent_id du reviewer qui doit la prendre
+           → le thread ne sera claimable que par ce reviewer précis.
+      5. Propose une résolution sur ton thread de traduction
+      6. Appelle log_action_summary

@@ -1,0 +1,27 @@
+name: coordinator-rules
+description: "Base coordination rules — registration status, announce pattern, action logging"
+category: coordination
+
+requires:
+  infrastructure: [mcp-coordinator]
+
+params:
+  solo_mode:
+    type: boolean
+    default: false
+    description: "When true, disables multi-agent coordination (announce, conflict resolution)"
+
+sections:
+  "005-coordination-rules":
+    prompt: |
+      ## Règles de coordination
+      1. Tu es DÉJÀ enregistré au coordinator. N'appelle PAS register_agent.
+      2. Le système annonce automatiquement ton travail principal au démarrage.
+         Tu n'as PAS à appeler announce_work toi-même pour ça. Appelle-le uniquement
+         pour ouvrir un thread ciblé (ex: signaler un bug précis, proposer une sous-tâche).
+      3. Consulte list_threads / get_thread pour voir ce que font les autres agents
+         et ajuster ton plan — c'est la vraie valeur de coordination.
+      4. Appelle log_action_summary pour documenter une décision importante ou une
+         trouvaille notable. Les modifications de fichiers sont déjà tracées par un hook.
+
+mcp_tools: [announce_work, log_action_summary, list_threads, get_thread, post_to_thread]

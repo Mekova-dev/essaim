@@ -1,0 +1,73 @@
+name: phase-discover
+description: "Discovery phase — read the code, produce a structured list of findings. No modifications."
+category: mission
+
+phase:
+  name: discover
+  tools_mode: read_only
+
+params:
+  discovery_mission:
+    type: string
+    required: true
+    description: "What to look for — injected by the preset (bugs, missing tests, refactoring opportunities, etc.)"
+  modules:
+    type: "string[]"
+    required: false
+    description: "Modules to analyze. If empty, agent discovers on its own."
+  output_format:
+    type: string
+    default: "FICHIER | LIGNE | DESCRIPTION | SÉVÉRITÉ (critical/major/minor)"
+  effort:
+    type: string
+    default: mid
+    description: "Effort profile (low/mid/high/max/auto). Defaults to mid (Sonnet) — Haiku tends to time-box on exploration and find too few items to keep the execute pool fed."
+  model:
+    type: string
+    default: ""
+    description: "Override model explicitly. Empty = use model from effort profile."
+  thinking:
+    type: string
+    default: ""
+    description: "Override thinking level (none/think/think-hard/ultrathink). Empty = use thinking from effort profile."
+  maxTurns:
+    type: number
+    required: false
+    description: "Override maxTurns explicitly. Omit to use maxTurns from effort profile."
+
+sections:
+  "030-discover":
+    prompt: |
+      ## Phase Discovery
+
+      {{params.discovery_mission}}
+
+      {{#if params.modules}}Modules à analyser: {{params.modules}}{{/if}}
+
+      ⚠️ BUDGET STRICT — lis attentivement :
+      Tu as un nombre limité de tours. Si tu épuises ton budget en exploration,
+      ta liste finale ne sera JAMAIS produite et ton travail sera perdu.
+
+      Plan obligatoire en 2 étapes :
+
+      **Étape 1 — EXPLORE (max 50% de ton budget, ~5-7 appels outils) :**
+      - Lis le code attentivement. NE MODIFIE AUCUN FICHIER.
+      - Utilise Read, Grep, Glob pour explorer ciblé.
+      - Vérifie avec list_threads si un autre agent a déjà signalé le même problème — ne duplique pas.
+
+      **Étape 2 — SYNTHÉTISE (obligatoire, SANS appeler d'outil) :**
+      - Dès que tu as ~50% de ton budget consommé ou assez d'info, STOPPE l'exploration.
+      - Produis ta réponse finale en texte pur, en commençant OBLIGATOIREMENT par "DISCOVERY:" sur sa propre ligne.
+      - Liste tes trouvailles, une par ligne, au format: {{params.output_format}}
+      - Si tu n'as RIEN trouvé, écris quand même :
+        ```
+        DISCOVERY:
+        (aucune trouvaille)
+        ```
+
+      🚨 CRITIQUE : Sans le marqueur "DISCOVERY:" dans ta réponse finale, le raid échoue.
+      Ne finis JAMAIS sans cette ligne. Mieux vaut peu de trouvailles qu'aucune réponse structurée.
+
+mcp_tools:
+  - list_threads
+  - get_thread

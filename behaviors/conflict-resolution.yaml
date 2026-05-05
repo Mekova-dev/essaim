@@ -1,0 +1,25 @@
+name: conflict-resolution
+description: "Full consultation protocol — propose resolution, wait for approvals, handle contestation"
+category: coordination
+
+# Scope: propose/approve/contest resolution only happens after an announce_work
+# has surfaced a conflict, which only occurs in full-tools phases. Read-only
+# phases never generate conflicts, so this rule is dead weight there.
+applies_when:
+  phase_tools_mode: [full]
+
+requires:
+  behaviors: [announce-before-write]
+  infrastructure: [mcp-coordinator]
+
+sections:
+  "025-conflict-check":
+    prompt: |
+      ## Résolution de conflits
+      Quand tu as reçu assez de contexte des autres agents:
+      1. Appelle propose_resolution avec ta synthèse (plan confirmé ou ajusté)
+      2. Attends les approbations de TOUS les participants
+      3. Si contestation: lis le feedback, ajuste, re-propose
+      4. Quand résolu: code en conséquence
+
+mcp_tools: [propose_resolution, approve_resolution, contest_resolution]

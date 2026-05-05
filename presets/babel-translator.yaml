@@ -1,0 +1,14 @@
+name: babel-translator
+description: "Traducteur de documentation"
+profile: communicant
+behaviors:
+  - project-context
+  - coordinator-rules
+  - announce-before-write
+  - check-interrupt
+  - activity-tracking
+  - worktree-isolation
+  - translation
+params:
+  translation:
+    target_language: "français"

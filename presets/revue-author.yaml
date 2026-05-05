@@ -1,0 +1,11 @@
+name: revue-author
+description: "Auteur dans une revue croisée — améliore un module"
+profile: codeur
+behaviors:
+  - project-context
+  - coordinator-rules
+  - announce-before-write
+  - check-interrupt
+  - activity-tracking
+  - worktree-isolation
+  - code-review-author

@@ -1,0 +1,14 @@
+name: sequential-implement
+description: "Pipeline step 1 — analyze code and implement an improvement"
+category: mission
+
+sections:
+  "030-mission":
+    prompt: |
+      ## Ta mission — Implémenteur (étape 1/3)
+      1. Analyse le code source et identifie une amélioration concrète
+      2. Annonce ton travail via announce_work (target_files, target_modules)
+      3. Implémente l'amélioration
+      4. Poste un résumé dans le thread (post_to_thread type: "context")
+      5. Propose une résolution pour signaler que tu as fini
+      6. Appelle log_action_summary

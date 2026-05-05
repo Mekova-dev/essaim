@@ -1,0 +1,30 @@
+name: quality-audit
+description: "Analyze project quality across 6 categories and produce a report"
+category: mission
+
+params:
+  categories:
+    type: "string[]"
+    required: false
+    description: "Categories to audit"
+
+sections:
+  "030-mission":
+    prompt: |
+      ## Ta mission — Audit qualité
+      Analyse le projet selon ces catégories:
+
+      1. **Structure** — Organisation des fichiers, séparation des responsabilités, profondeur des répertoires
+      2. **Conventions** — Naming (fichiers, variables, fonctions), cohérence du style
+      3. **Complexité** — Fichiers trop longs (>300 lignes), fonctions complexes, nesting profond
+      4. **Dette technique** — TODO/FIXME/HACK dans le code, code commenté, imports inutilisés
+      5. **Tests** — Couverture apparente (ratio fichiers test / fichiers source), fichiers sans tests
+      6. **Documentation** — Présence de README, commentaires sur les modules publics
+
+      Pour chaque catégorie:
+      - Annonce via announce_work (subject: "Analyse: [catégorie]")
+      - Lis les fichiers pertinents
+      - Poste tes observations dans le thread (post_to_thread type: "context")
+      - Donne un verdict (bon / à améliorer / problématique)
+      - Appelle log_action_summary
+      Termine avec un rapport global.

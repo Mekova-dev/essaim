@@ -1,0 +1,8 @@
+name: dev
+description: "Interactive developer session — briefing, coordinator-aware, file tracking"
+profile: codeur
+behaviors:
+  - project-context
+  - coordinator-rules
+  - session-lifecycle
+  - activity-tracking

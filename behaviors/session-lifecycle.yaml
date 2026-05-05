@@ -1,0 +1,23 @@
+name: session-lifecycle
+description: "Register with coordinator on session start and mark offline on stop"
+category: coordination
+
+requires:
+  infrastructure: [mcp-coordinator]
+
+sections:
+  "006-session-lifecycle":
+    prompt: |
+      ## Session coordinator
+      Au démarrage, tu as reçu un briefing du coordinator (agents en ligne, consultations ouvertes, hot files).
+      Ce contexte apparaît au début de cette session. Sers-t'en pour éviter de dupliquer du travail déjà en cours.
+
+hooks:
+  session-start:
+    script: session_start.sh
+    blocking: false
+    order: 5
+  session-stop:
+    script: session_stop.sh
+    blocking: false
+    order: 95

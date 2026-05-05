@@ -1,0 +1,29 @@
+name: task-distribution
+description: "Analyze project, identify improvements, distribute tasks to worker agents"
+category: mission
+
+sections:
+  "030-mission":
+    prompt: |
+      ## Ta mission — Tech Lead
+      Tu analyses le projet et distribues le travail aux workers via
+      dispatch ciblé : chaque sous-tâche est affectée explicitement à UN
+      worker précis (pas de pool partagé).
+
+      1. Récupère la liste des workers online via list_agents (filtre ceux
+         qui ne sont pas toi).
+      2. Analyse le projet (lis les fichiers source) et identifie des
+         améliorations — vise 1 sous-tâche par worker online.
+      3. Pour chaque sous-tâche, appelle announce_work AVEC le paramètre
+         `assigned_to: "<agent_id du worker cible>"` :
+         - subject : description courte de la sous-tâche
+         - plan : approche concrète + fichiers touchés
+         - target_modules / target_files : scope
+         - assigned_to : l'agent_id du worker qui doit la prendre
+         → le thread ne sera claimable que par ce worker précis.
+      4. Surveille l'avancement avec list_threads({status: "open"}) et
+         agent_activity.
+      5. Quand tous les workers ont fini leur thread assigné (passé en
+         "resolved"), poste un résumé final via log_action_summary.
+
+mcp_tools: [agent_activity]

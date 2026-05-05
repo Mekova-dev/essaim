@@ -1,0 +1,33 @@
+name: translation-review
+description: "Review translation quality — check fidelity, naturalness, terminology"
+category: mission
+
+params:
+  target_language:
+    type: string
+    required: true
+    description: "Language that was translated to"
+
+sections:
+  "030-mission":
+    prompt: |
+      ## Ta mission — Révision des traductions
+      Tu révises les traductions vers {{params.target_language}} que le
+      traducteur t'a dispatchées directement via dispatch ciblé.
+
+      1. Surveille les threads avec
+         list_threads({status: "open", assigned_to_me: "<ton agent_id>"}).
+         Ce filtre te montre uniquement les threads sans dispatcheur
+         (open pool) OU assignés explicitement à toi — tu ignores ceux
+         qui ciblent d'autres reviewers.
+      2. Quand un traducteur t'a dispatché une review, lis les fichiers
+         traduits listés dans le thread (subject + plan + target_files).
+      3. Pour chaque fichier traduit, vérifie:
+         - Fidélité au sens original
+         - Naturalité de la langue {{params.target_language}}
+         - Cohérence terminologique
+         - Structure Markdown préservée
+         - Aucun code traduit par erreur
+      4. Poste tes observations dans le thread (post_to_thread
+         type: "suggestion" ou "warning")
+      5. Appelle log_action_summary avec ton verdict

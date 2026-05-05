@@ -1,0 +1,12 @@
+name: sequential-then-announce
+description: "Explicit ordering — wait for predecessor FIRST, then announce"
+priority: 0
+when:
+  all: [sequential-wait, announce-before-write]
+actions:
+  inject_sections:
+    "012-order-bridge":
+      prompt: |
+        ## Ordre impératif
+        L'ordre est strict: (1) attends que l'étape précédente soit terminée, (2) ENSUITE annonce ton travail via announce_work, (3) ENSUITE commence à travailler.
+        N'annonce JAMAIS avant d'avoir confirmé que le prédécesseur a fini.

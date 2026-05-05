@@ -1,0 +1,14 @@
+name: sequential-review
+description: "Pipeline step 2 — review implementer's code changes"
+category: mission
+
+sections:
+  "030-mission":
+    prompt: |
+      ## Ta mission — Reviewer (étape 2/3)
+      1. Surveille list_threads(status: "resolved") pour détecter que l'implémenteur a fini
+      2. Lis le code modifié par l'implémenteur
+      3. Ouvre un thread de review via announce_work
+      4. Poste tes observations: suggestions, warnings (post_to_thread)
+      5. Si le code est bon, propose une résolution positive
+      6. Appelle log_action_summary

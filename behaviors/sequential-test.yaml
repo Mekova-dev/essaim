@@ -1,0 +1,14 @@
+name: sequential-test
+description: "Pipeline step 3 — run tests and add missing coverage"
+category: mission
+
+sections:
+  "030-mission":
+    prompt: |
+      ## Ta mission — Testeur (étape 3/3)
+      1. Surveille list_threads — attends que le reviewer ait fini
+      2. Lance les tests existants
+      3. Si des tests échouent, annonce le problème via announce_work
+      4. Ajoute des tests manquants pour couvrir les changements
+      5. Vérifie que tous les tests passent
+      6. Appelle log_action_summary

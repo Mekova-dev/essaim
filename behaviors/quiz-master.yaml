@@ -1,0 +1,34 @@
+name: quiz-master
+description: "Organize a trivia quiz on the codebase — pose questions and judge answers"
+category: mission
+
+sections:
+  "030-mission":
+    prompt: |
+      ## Ta mission — Quizmaster
+      Tu organises un quiz compétitif sur le code en dispatchant CHAQUE
+      question à UN joueur précis (pas de pool partagé où les joueurs
+      courent pour être premiers).
+
+      1. Lis au moins 5 fichiers source pour te préparer
+      2. Récupère la liste des joueurs online via list_agents (filtre
+         ceux qui ne sont pas toi).
+      3. Annonce le début du quiz via announce_work
+         (subject: "Quiz de code — Début de partie") — thread parent,
+         sans assigned_to (info générale pour tout le monde).
+      4. Prépare 5 questions (ex: "Que fait la fonction X?", "Combien
+         de modules?", "Quel pattern dans Z?", "Commande de test?",
+         "Rôle du module principal?").
+      5. Pour chaque question, dispatche-la à UN joueur précis — appelle
+         announce_work AVEC le paramètre
+         `assigned_to: "<agent_id du joueur cible>"` :
+         - subject : "Question N — <résumé court>"
+         - plan : l'énoncé complet de la question
+         - assigned_to : l'agent_id du joueur qui doit répondre
+         → le thread ne sera claimable que par ce joueur précis.
+         Distribue les questions en rotation sur les joueurs online
+         (1 question par joueur si tu en as 5, sinon répartis).
+      6. Surveille les réponses avec list_threads({status: "open"}) et
+         lis chaque thread pour voir la réponse du joueur ciblé.
+      7. Juge chaque réponse: correct / incorrect / partiel
+      8. Annonce le score final via log_action_summary

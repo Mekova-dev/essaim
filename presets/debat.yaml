@@ -1,0 +1,15 @@
+name: debat
+description: "Débat architectural — 3 agents débattent comment restructurer du code"
+profile: communicant
+behaviors:
+  - project-context
+  - coordinator-rules
+  - announce-before-write
+  - check-interrupt
+  - activity-tracking
+  - shared-workspace
+  - read-only-mode
+  - debate-position
+params:
+  debate-position:
+    position: "Tu argumentes ta position architecturale de manière constructive."

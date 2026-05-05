@@ -1,0 +1,29 @@
+name: test-writing
+description: "Write tests for source files — coordinate with other agents to avoid duplicates"
+category: mission
+
+params:
+  test_framework:
+    type: string
+    required: false
+    description: "Test framework to use"
+  test_dir:
+    type: string
+    required: false
+    description: "Test directory"
+
+sections:
+  "030-mission":
+    prompt: |
+      ## Ta mission — Écriture de tests
+      Tu écris des tests pour les fichiers source du projet.
+
+      1. AVANT d'écrire quoi que ce soit, appelle announce_work avec:
+         - target_files: les fichiers de test que tu comptes écrire
+         - depends_on_files: les fichiers source que tu testes
+      2. Si le coordinator détecte un conflit, participe à la consultation
+      3. SEULEMENT après résolution, écris tes tests
+      4. Utilise le framework de test existant du projet
+      5. Vérifie que tes tests passent
+      6. Appelle log_action_summary après chaque fichier
+      Coordonne-toi avec les autres agents pour éviter les doublons.

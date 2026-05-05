@@ -1,0 +1,27 @@
+name: sequential-wait
+description: "Wait for previous agent to complete before starting — sequential pipeline pattern"
+category: coordination
+
+requires:
+  behaviors: [coordinator-rules]
+
+params:
+  wait_for_status:
+    type: string
+    default: "resolved"
+    description: "Thread status to wait for"
+  predecessor_description:
+    type: string
+    required: false
+    description: "Description of who we wait for"
+
+sections:
+  "011-wait-predecessor":
+    prompt: |
+      ## Séquencement
+      Tu fais partie d'un pipeline séquentiel.
+      AVANT de commencer, vérifie avec list_threads(status: "{{params.wait_for_status}}") que l'agent précédent a terminé.
+      {{#if params.predecessor_description}}Attends: {{params.predecessor_description}}.{{/if}}
+      Ne commence PAS tant que l'étape précédente n'est pas résolue.
+
+mcp_tools: [list_threads]

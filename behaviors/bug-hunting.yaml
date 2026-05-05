@@ -1,0 +1,38 @@
+name: bug-hunting
+description: "Hunt bugs and missing edge cases in assigned modules, write tests to expose them"
+category: mission
+
+params:
+  modules:
+    type: "string[]"
+    required: false
+    description: "Modules to hunt bugs in. If empty, agent discovers on its own."
+  bug_categories:
+    type: "string[]"
+    required: false
+    description: "Bug categories to look for"
+
+sections:
+  "030-mission":
+    prompt: |
+      ## Ta mission — Chasse aux bugs
+      Tu chasses les bugs, les edge cases manquants et les problèmes potentiels.
+      {{#if params.modules}}Modules assignés: {{params.modules}}{{/if}}
+
+      IMPORTANT: Pour chaque bug, tu DOIS annoncer AVANT d'écrire le test.
+
+      1. Lis attentivement les fichiers de tes modules
+      2. AVANT d'investiguer un fichier, appelle list_threads pour voir si un autre chasseur l'a déjà couvert
+      3. Pour CHAQUE bug trouvé:
+         a. Appelle announce_work avec: subject: "Bug: [description]", target_files: [fichier]
+         b. Si conflit détecté, skip et passe au suivant
+         c. Si pas de conflit: écris le test qui expose le bug
+         d. Poste les détails (post_to_thread type: "warning") avec fichier et ligne
+         e. Appelle log_action_summary
+      4. Catégories de bugs à chercher:
+         - Valeurs nulles / undefined non gérées
+         - Edge cases manquants (tableau vide, chaîne vide, nombres négatifs)
+         - Erreurs de gestion d'exceptions
+         - Conditions limites dans les boucles
+         - Problèmes de concurrence ou d'état
+      5. Lance les tests régulièrement

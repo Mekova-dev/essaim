@@ -1,0 +1,42 @@
+name: check-interrupt
+description: "DEPRECATED — replaced by agent-loop MQTT push. Check for pending coordination threads before and after each file edit"
+deprecated: true
+category: coordination
+
+requires:
+  infrastructure: [mcp-coordinator]
+
+sections:
+  "022-interrupt-handling":
+    prompt: |
+      ## Interruptions de coordination
+      Tes hooks vérifient automatiquement avant et après chaque Edit/Write
+      si un autre agent attend ta réponse sur un thread de consultation.
+
+      Si tu vois un message "⚠️ COORDINATION INTERRUPT" :
+      1. ARRÊTE ton travail en cours
+      2. Appelle get_thread(thread_id) pour lire le contexte complet
+      3. Poste ta réponse via post_to_thread (type: "context" ou "warning")
+      4. Si le thread est en status "resolving", appelle approve_resolution ou contest_resolution
+      5. Si pas de conflit bloquant, appelle propose_resolution avec un résumé
+      6. REPRENDS ton travail où tu l'avais laissé
+
+      Ne pas ignorer les interruptions — elles sont critiques pour la coordination.
+
+hooks:
+  pre-tool-use:
+    script: check_interrupt.sh
+    blocking: false
+    order: 10
+  post-tool-use:
+    script: check_interrupt.sh
+    blocking: false
+    order: 60
+
+mcp_tools:
+  - get_thread
+  - get_thread_updates
+  - post_to_thread
+  - propose_resolution
+  - approve_resolution
+  - contest_resolution
