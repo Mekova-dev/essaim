@@ -1,7 +1,7 @@
 ﻿import { Command } from "commander";
 import { execSync } from "child_process";
 import { dirname } from "path";
-import { VERSION } from "./paths-stub.js";
+import { getVersion } from "./version.js";
 
 const REPO = "swoofer/essaim";
 
@@ -82,7 +82,7 @@ export function createSelfUpdateCommand(): Command {
   return new Command("self-update")
     .description("Update essaim to the latest version")
     .action(() => {
-      const currentVersion = VERSION;
+      const currentVersion = getVersion();
 
       console.log("Checking for updates...");
       let latest: string;
