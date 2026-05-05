@@ -6,7 +6,12 @@ import { resolve } from "path";
 import { createLogger } from "../logger.js";
 const log = createLogger("orchestrator");
 
-const __filename = fileURLToPath(import.meta.url);
+let __filename: string;
+try {
+  __filename = fileURLToPath(import.meta.url);
+} catch {
+  __filename = process.execPath;  // fall back to binary path under Bun --compile
+}
 const __dirname = path.dirname(__filename);
 import { createWorkspaces, cleanupWorkspaces, resetBase } from "./workspace.js";
 import { launchAgent, launchAgentLoop, waitForProcess, randomDelay, fixedDelay } from "./agent-launcher.js";
