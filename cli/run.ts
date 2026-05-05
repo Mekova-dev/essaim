@@ -94,6 +94,9 @@ export function createRunCommand(): Command {
         // excluded here so that bare `essaim run` triggers Strategy A rather
         // than assuming an external server at localhost:3100.
         loadConfig(); // ensure config warning is shown (side-effect only)
+        if (opts.url && !opts.coordinatorUrl) {
+          console.warn("⚠️  --url is deprecated; use --coordinator-url instead");
+        }
         const resolvedCoordinatorUrl =
           opts.coordinatorUrl ??
           opts.url ??
