@@ -1416,18 +1416,22 @@ describe('pipeline.ts â€” pipeline branches', () => {
   });
 
   it('uses composedRegistry with overridden getBehavior from composition', () => {
-    // When composition modifies a behavior, the composedRegistry proxy is used
+    // When composition modifies a behavior, the composedRegistry proxy is used.
+    // Uses announce-readonly-adaptation rule (triggers on announce-before-write + read-only-mode)
+    // which overrides the announce-before-write "020-before-coding" section to say "analyse".
+    // (Original test used phantom behavior 'sequential-pipeline' and phantom rule
+    // 'announce-after-relay' — neither exist in the catalog.)
     const agent: Agent = {
       name: 'composed-agent',
-      behaviors: ['announce-before-write', 'conflict-resolution', 'sequential-pipeline'],
+      behaviors: ['coordinator-rules', 'announce-before-write', 'read-only-mode'],
       add: [],
       remove: [],
       params: {},
     };
     const result = runPipeline(agent, FIXTURES, {});
-    // The announce-after-relay rule should have modified announce-before-write
-    expect(result.compositionRulesApplied).toContain('announce-after-relay');
-    expect(result.output.prompt).toContain('relay');
+    // The announce-readonly-adaptation rule should have overridden announce-before-write
+    expect(result.compositionRulesApplied).toContain('announce-readonly-adaptation');
+    expect(result.output.prompt).toContain('analyse');
   });
 });
 
