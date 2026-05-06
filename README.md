@@ -592,6 +592,17 @@ If you were using `mcp-coordinator-v3` directly, here is the command-by-command 
 
 ---
 
+## Support
+
+Solo maintainer. If this project saves you time, consider supporting development:
+
+- [GitHub Sponsors](https://github.com/sponsors/swoofer)
+- [Buy Me A Coffee](https://buymeacoffee.com/swoofer)
+
+A star on the repo also helps surface the project to other developers.
+
+---
+
 ## License
 
 MIT
