@@ -1,4 +1,4 @@
-﻿import { Command } from "commander";
+import { Command } from "commander";
 import { execSync } from "child_process";
 import { dirname } from "path";
 import { getVersion } from "./version.js";
@@ -31,7 +31,7 @@ function fetchLatestTag(): { tag: string; source: Source } {
     if (data.tag_name) {
       return { tag: (data.tag_name as string).replace(/^v/, ""), source: "curl" };
     }
-    // API returned a payload but no tag_name â€” usually 404 (private repo) or rate limit
+    // API returned a payload but no tag_name — usually 404 (private repo) or rate limit
     if (data.message !== "Not Found" && !String(data.message ?? "").includes("rate limit")) {
       throw new Error(`Unexpected response: ${data.message ?? "no tag_name"}`);
     }
@@ -105,7 +105,7 @@ export function createSelfUpdateCommand(): Command {
         return;
       }
 
-      console.log(`Update available: v${currentVersion} â†’ v${latest}`);
+      console.log(`Update available: v${currentVersion} → v${latest}`);
 
       const platform = process.platform === "darwin" ? "darwin" : "linux";
       const arch = process.arch === "arm64" ? "arm64" : "x64";

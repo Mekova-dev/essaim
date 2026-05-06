@@ -1,4 +1,4 @@
-﻿import { Command } from "commander";
+import { Command } from "commander";
 import { resolve } from "path";
 import { scanProject } from "../src/orchestrator/scanner.js";
 import {
@@ -25,7 +25,7 @@ export function createRunCommand(): Command {
       "--coordinator-url <url>",
       "Use an external coordinator at this URL instead of starting one in-process",
     )
-    .option("--base-ref <ref>", "Git ref for worktree snapshot (tag, branch, sha) â€” use for sandbox testing against a fixed codebase")
+    .option("--base-ref <ref>", "Git ref for worktree snapshot (tag, branch, sha) — use for sandbox testing against a fixed codebase")
     .option("--max-quota-pct <pct>", "Abort pre-flight if Anthropic quota utilization is at/above this % (default 95, also reads MAX_QUOTA_PCT env)")
     .action(
       async (

@@ -1,4 +1,4 @@
-﻿import { createClaudeStream, type ClaudeStreamClient, type AssistantResponse, type SendOptions, type TokenUsage, BudgetExceededError, AbortError } from "./claude-stream.js";
+import { createClaudeStream, type ClaudeStreamClient, type AssistantResponse, type SendOptions, type TokenUsage, BudgetExceededError, AbortError } from "./claude-stream.js";
 import { createMqttListener, type MqttListener, type MqttInterrupt, type InterruptType } from "./mqtt-listener.js";
 import {
   createCoordinationProtocol,
@@ -11,7 +11,7 @@ import { parseDiscoveries, postDiscoveries, claimNextTask, completeTask, unclaim
 import { createLogger } from "../logger.js";
 import { resolveEffort, upgradeEffort, parseSeverity, EFFORT_PROFILES, isThinkingLevel, type EffortLevel, type ConcreteEffortLevel, type ThinkingLevel } from "./effort.js";
 
-// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Types ──────────────────────────────────────────────────────────────
 
 export interface AgentLoopConfig {
   agentId: string;
@@ -27,7 +27,7 @@ export interface AgentLoopConfig {
   maxBudgetUsd?: number;
   maxTurns?: number;
   dangerouslySkipPermissions?: boolean;
-  // Max times the phased sequence (discover â†’ review â†’ execute) is re-run
+  // Max times the phased sequence (discover → review → execute) is re-run
   // when execute exits with an empty pool while real work was done.
   // Default 1 (no re-discover). Raise this for raids that need extra pool refills.
   maxDiscoverCycles?: number;
@@ -128,7 +128,7 @@ const SILENT_INTERRUPT_TYPES: Set<InterruptType> = new Set([
   "agent_offline",
 ]);
 
-// â”€â”€ Per-phase tool restriction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Per-phase tool restriction ─────────────────────────────────────────
 // Tools mode drives which user-facing tools the agent can call during a phase.
 // MCP tools (prefix "mcp__") pass through unconditionally since coordination
 // depends on them. The session-level allowedTools (from the orchestrator) is
@@ -153,7 +153,7 @@ const ALL_USER_TOOLS: readonly string[] = [
 const WRITE_USER_TOOLS: readonly string[] = ["Write", "Edit", "NotebookEdit"];
 // Spawning sub-agents from inside a work-stealing task multiplies cost/latency:
 // each Agent call is another Claude session running its own tool loop, invisible
-// in the outer turn count. We always block it â€” the work-stealing task itself
+// in the outer turn count. We always block it — the work-stealing task itself
 // is already an agent, nested agents just explode the budget.
 const NESTED_AGENT_TOOLS: readonly string[] = ["Task", "Agent"];
 
@@ -173,23 +173,23 @@ function toolsForMode(
 function disallowedForMode(
   toolsMode: "read_only" | "full" | "none",
 ): string[] {
-  // Nested agents are blocked in every mode â€” see NESTED_AGENT_TOOLS comment.
+  // Nested agents are blocked in every mode — see NESTED_AGENT_TOOLS comment.
   if (toolsMode === "full") return [...NESTED_AGENT_TOOLS];
   if (toolsMode === "none") return [...ALL_USER_TOOLS];
   // read_only: block write tools explicitly + nested agents
   return [...WRITE_USER_TOOLS, ...NESTED_AGENT_TOOLS];
 }
 
-// â”€â”€ Prompt injections â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Prompt injections ──────────────────────────────────────────────────
 
 const AGENT_LOOP_SYSTEM_SUFFIX = `
-Tu travailles en mode agent-loop. Le systÃ¨me gÃ¨re la coordination pour toi.
+Tu travailles en mode agent-loop. Le système gère la coordination pour toi.
 
-RÃ¨gles :
-- Fais UNE action par rÃ©ponse (un Edit, un Read, un Bash...)
-- N'appelle PAS announce_work, post_to_thread, propose_resolution â€” le systÃ¨me le fait
-- Quand tu as fini le travail, dis "DONE: <rÃ©sumÃ© en une phrase>"
-- Quand le systÃ¨me t'injecte un interrupt, rÃ©ponds-y avant de continuer
+Règles :
+- Fais UNE action par réponse (un Edit, un Read, un Bash...)
+- N'appelle PAS announce_work, post_to_thread, propose_resolution — le système le fait
+- Quand tu as fini le travail, dis "DONE: <résumé en une phrase>"
+- Quand le système t'injecte un interrupt, réponds-y avant de continuer
 `.trim();
 
 function formatInterrupts(interrupts: MqttInterrupt[]): string {
@@ -201,14 +201,14 @@ function formatInterrupts(interrupts: MqttInterrupt[]): string {
     if (i.content) parts.push(i.content);
     return parts.join(" ");
   });
-  return `[INTERRUPTION SYSTÃˆME] Les messages suivants viennent d'autres agents. RÃ©ponds-y briÃ¨vement avant de continuer ton travail. ${lines.join(" | ")}`;
+  return `[INTERRUPTION SYSTÈME] Les messages suivants viennent d'autres agents. Réponds-y brièvement avant de continuer ton travail. ${lines.join(" | ")}`;
 }
 
 function formatCoordinationContext(context: string, responses: string): string {
-  return `[CONTEXTE COORDINATION] ${context} RÃ©ponses des autres agents: ${responses} Que fais-tu? RÃ©ponds par CONTINUE, YIELD, ou ADJUST suivi de ton nouveau plan.`;
+  return `[CONTEXTE COORDINATION] ${context} Réponses des autres agents: ${responses} Que fais-tu? Réponds par CONTINUE, YIELD, ou ADJUST suivi de ton nouveau plan.`;
 }
 
-// â”€â”€ Coordinator REST helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Coordinator REST helpers ───────────────────────────────────────────
 
 async function coordinatorPost(
   url: string,
@@ -222,7 +222,7 @@ async function coordinatorPost(
       body: JSON.stringify(body),
     });
   } catch (err) {
-    throw new Error(`Cannot reach coordinator at ${url} â€” is the server running? (${(err as Error).message})`);
+    throw new Error(`Cannot reach coordinator at ${url} — is the server running? (${(err as Error).message})`);
   }
   if (!resp.ok) throw new Error(`Coordinator ${url} returned ${resp.status}`);
   return (await resp.json()) as Record<string, unknown>;
@@ -233,7 +233,7 @@ async function announceViaRest(
   agentId: string,
   work: WorkDescription,
 ): Promise<AnnounceResult> {
-  // POST /api/announce â€” exists in serve-http.ts
+  // POST /api/announce — exists in serve-http.ts
   const data = await coordinatorPost(`${coordinatorUrl}/api/announce`, {
     agent_id: agentId,
     subject: work.subject,
@@ -297,7 +297,7 @@ async function approveResolutionViaRest(
   });
 }
 
-// â”€â”€ Main loop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main loop ──────────────────────────────────────────────────────────
 
 const defaultLogger: AgentLoopLogger = createLogger("agent-loop");
 
@@ -312,14 +312,14 @@ export async function runAgentLoop(
   let mqttMessagesProcessed = 0;
   let exitReason: ExitReason = "done";
   let summary = "";
-  // â”€â”€ Token + cost diagnostics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Token + cost diagnostics ──────────────────────────────────────────
   const totalTokens = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };
   const costByPhase: Record<string, number> = {};
   const costByModel: Record<string, number> = {};
   const turnDetails: TurnDetail[] = [];
   let currentPhase = "coordination";  // updated as the loop transitions phases
 
-  // â”€â”€ â‘  INIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── ① INIT ──────────────────────────────────────────────────────────
 
   logger.info("Starting agent loop", { agentId: config.agentId, maxTurns });
 
@@ -341,18 +341,18 @@ export async function runAgentLoop(
   });
 
   // Separate lightweight session for interrupt responses (Fix 5: don't pollute main context).
-  // Hardcoded to haiku (low effort) â€” interrupts are ack-level work and never need opus.
+  // Hardcoded to haiku (low effort) — interrupts are ack-level work and never need opus.
   const interruptClaude: ClaudeStreamClient = createClaudeStream({
     workspacePath: config.workspacePath,
     model: EFFORT_PROFILES.low.model,
-    appendSystemPrompt: "Tu reÃ§ois des notifications d'autres agents. RÃ©ponds en 1-2 phrases max.",
+    appendSystemPrompt: "Tu reçois des notifications d'autres agents. Réponds en 1-2 phrases max.",
     maxTurns: 1,
     dangerouslySkipPermissions: config.dangerouslySkipPermissions,
     abortSignal: config.abortSignal,
     env: config.env,
   });
 
-  // â”€â”€ Termination gates (F1 + F2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Termination gates (F1 + F2) ───────────────────────────────────────
   // checkTermination() returns an ExitReason if the loop must stop (deadline hit,
   // orchestrator aborted). Callers treat a truthy return as a hard break signal.
   function checkTermination(): ExitReason | null {
@@ -370,7 +370,7 @@ export async function runAgentLoop(
   // before each work-stealing claim. The coordinator caches with a 30s TTL so
   // this is cheap and doesn't hammer the Anthropic API. Returns a block reason
   // if five_hour or seven_day meets/exceeds the threshold. Returns null
-  // (= proceed) on 503 / network error â€” matches the fail-open decision for
+  // (= proceed) on 503 / network error — matches the fail-open decision for
   // quota checks.
   const MAX_QUOTA_PCT = config.maxQuotaPct ?? 95;
   async function quotaBlocksNextTask(): Promise<string | null> {
@@ -385,10 +385,10 @@ export async function runAgentLoop(
       const five = data.five_hour?.utilization ?? 0;
       const seven = data.seven_day?.utilization ?? 0;
       if (five >= MAX_QUOTA_PCT) {
-        return `five_hour at ${five.toFixed(1)}% (â‰¥ ${MAX_QUOTA_PCT}% max, resets in ${data.five_hour?.minutesUntilReset}min)`;
+        return `five_hour at ${five.toFixed(1)}% (≥ ${MAX_QUOTA_PCT}% max, resets in ${data.five_hour?.minutesUntilReset}min)`;
       }
       if (seven >= MAX_QUOTA_PCT) {
-        return `seven_day at ${seven.toFixed(1)}% (â‰¥ ${MAX_QUOTA_PCT}% max, resets in ${data.seven_day?.minutesUntilReset}min)`;
+        return `seven_day at ${seven.toFixed(1)}% (≥ ${MAX_QUOTA_PCT}% max, resets in ${data.seven_day?.minutesUntilReset}min)`;
       }
       return null;
     } catch {
@@ -411,12 +411,12 @@ export async function runAgentLoop(
     await mqtt.connect();
     logger.info("MQTT connected", { url: config.mqttUrl });
   } catch (err) {
-    logger.warn("MQTT connection failed â€” running without push notifications", {
+    logger.warn("MQTT connection failed — running without push notifications", {
       error: (err as Error).message,
     });
   }
 
-  // â”€â”€ Helper: send to claude and track cost + tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Helper: send to claude and track cost + tokens ────────────────
 
   function formatTokens(n: number): string {
     if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
@@ -443,7 +443,7 @@ export async function runAgentLoop(
         }),
       });
     } catch {
-      // Never block on telemetry â€” coordinator might be down
+      // Never block on telemetry — coordinator might be down
     }
   }
 
@@ -466,7 +466,7 @@ export async function runAgentLoop(
     const model = opts?.model ?? config.model ?? "unknown";
     costByModel[model] = (costByModel[model] || 0) + resp.costUsd;
 
-    // Cache hit ratio â€” % of input tokens served from cache (cheap)
+    // Cache hit ratio — % of input tokens served from cache (cheap)
     const totalInputAttempted = t.inputTokens + t.cacheReadTokens + t.cacheCreationTokens;
     const cacheHitPct = totalInputAttempted > 0
       ? Math.round((t.cacheReadTokens / totalInputAttempted) * 100)
@@ -495,7 +495,7 @@ export async function runAgentLoop(
       `(${resp.durationMs}ms, ${resp.toolCalls.length} tools)`,
     );
 
-    // Fire-and-forget telemetry to coordinator for live dashboard â€” never blocks
+    // Fire-and-forget telemetry to coordinator for live dashboard — never blocks
     void postTokenUsageSse(detail);
 
     return resp;
@@ -512,19 +512,19 @@ export async function runAgentLoop(
     const raw = (phase.effort ?? "auto") as EffortLevel;
     const level = resolveEffort(raw, { toolsMode: phase.toolsMode, loop: phase.loop });
     const profile = EFFORT_PROFILES[level];
-    // Per-dimension override escape hatches â€” each phase param takes precedence over the profile default.
+    // Per-dimension override escape hatches — each phase param takes precedence over the profile default.
     // Empty-string model/thinking (YAML default) are treated as unset so they don't clobber the profile.
     const model = phase.model && phase.model !== "" ? phase.model : profile.model;
     const thinking: ThinkingLevel =
       phase.thinking && phase.thinking !== "" && isThinkingLevel(phase.thinking)
         ? phase.thinking
         : profile.thinking;
-    // Treat 0 as "unset" â€” it's nonsensical as a turn budget and leaks from resolveParams defaults.
+    // Treat 0 as "unset" — it's nonsensical as a turn budget and leaks from resolveParams defaults.
     const maxTurns = phase.maxTurns && phase.maxTurns > 0 ? phase.maxTurns : profile.maxTurns;
     return { level, model, thinking, maxTurns };
   }
 
-  // â”€â”€ Helper: process MQTT interrupts (Fix 1: silent filtering) â”€â”€â”€â”€â”€
+  // ── Helper: process MQTT interrupts (Fix 1: silent filtering) ─────
 
   async function processInterrupts(): Promise<boolean> {
     const interrupts = mqtt.drain();
@@ -584,7 +584,7 @@ export async function runAgentLoop(
     return true;
   }
 
-  // â”€â”€ Helper: process protocol actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Helper: process protocol actions ──────────────────────────────
 
   async function processProtocolActions(): Promise<void> {
     for (;;) {
@@ -624,7 +624,7 @@ export async function runAgentLoop(
           break;
         }
         case "ask_llm_respond": {
-          const respondResp = await send(`RÃ©ponds au thread ${action.threadId}:\n${action.context}`);
+          const respondResp = await send(`Réponds au thread ${action.threadId}:\n${action.context}`);
           // Post the LLM's response to the coordinator via REST
           await postToThreadViaRest(
             config.coordinatorUrl,
@@ -638,7 +638,7 @@ export async function runAgentLoop(
         case "propose_resolution": {
           // Ask LLM for a summary, then propose via REST
           const summaryResp = await send(
-            `Le travail est terminÃ©. RÃ©sume en 1-2 phrases ce que tu as fait pour le thread ${action.threadId}.`,
+            `Le travail est terminé. Résume en 1-2 phrases ce que tu as fait pour le thread ${action.threadId}.`,
           );
           await proposeResolutionViaRest(
             config.coordinatorUrl,
@@ -667,12 +667,12 @@ export async function runAgentLoop(
     }
   }
 
-  // â”€â”€ Main execution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Main execution ────────────────────────────────────────────────
 
   try {
-    // â‘¡ COORDINATION PHASE â€” announce work
+    // ② COORDINATION PHASE — announce work
     logger.info("Phase 2: announcing work");
-    // Build a meaningful subject from agent + modules â€” NOT the full prompt.
+    // Build a meaningful subject from agent + modules — NOT the full prompt.
     // The old behaviour leaked the multi-line coordination prompt into the
     // thread list, making the dashboard unreadable.
     const modulesPart = config.modules.length > 0 ? ` on ${config.modules.join(", ")}` : "";
@@ -691,11 +691,11 @@ export async function runAgentLoop(
       logger.info("Agent yielded", { agentId: config.agentId });
     } else {
       if (config.phases && config.phases.length > 0) {
-        // â”€â”€ PHASED MODE (work-stealing) â”€â”€
-        logger.info(`Phased mode: ${config.phases.map((p) => `${p.name}${p.loop ? "(loop)" : ""}`).join(" â†’ ")}`);
+        // ── PHASED MODE (work-stealing) ──
+        logger.info(`Phased mode: ${config.phases.map((p) => `${p.name}${p.loop ? "(loop)" : ""}`).join(" → ")}`);
         let discoveryContent = "";
         const hasReviewPhase = config.phases.some((p) => p.name === "review");
-        logger.info(`Review phase: ${hasReviewPhase ? "YES â€” discoveries will be deduped" : "NO â€” discoveries posted directly"}`);
+        logger.info(`Review phase: ${hasReviewPhase ? "YES — discoveries will be deduped" : "NO — discoveries posted directly"}`);
 
         // Cycle the phases if the execute pool exhausted while we still had turn budget.
         // Each cycle re-runs discover/review to seed new threads for the pool.
@@ -707,13 +707,13 @@ export async function runAgentLoop(
         while (cycle < MAX_DISCOVER_CYCLES && turnsCount < maxTurns) {
           const cycleGate = checkTermination();
           if (cycleGate) {
-            logger.warn(`Phased mode: cycle halted â€” ${cycleGate}`);
+            logger.warn(`Phased mode: cycle halted — ${cycleGate}`);
             exitReason = cycleGate;
             break;
           }
           cycle++;
           if (cycle > 1) {
-            logger.info(`â•â•â• Re-discover cycle ${cycle}/${MAX_DISCOVER_CYCLES} â€” pool exhausted, looking for more work â•â•â•`);
+            logger.info(`═══ Re-discover cycle ${cycle}/${MAX_DISCOVER_CYCLES} — pool exhausted, looking for more work ═══`);
           }
           poolExhaustedLastCycle = false;
           tasksDoneLastCycle = 0;
@@ -722,7 +722,7 @@ export async function runAgentLoop(
         for (const phase of config.phases) {
           const phaseGate = checkTermination();
           if (phaseGate) {
-            logger.warn(`Phased mode: skipping phase ${phase.name} â€” ${phaseGate}`);
+            logger.warn(`Phased mode: skipping phase ${phase.name} — ${phaseGate}`);
             exitReason = phaseGate;
             break;
           }
@@ -741,21 +741,21 @@ export async function runAgentLoop(
               discoveryContent = resp.content;
 
               const tasks = parseDiscoveries(resp.content);
-              // Always log parse results â€” critical for diagnosing the "0 tasks"
+              // Always log parse results — critical for diagnosing the "0 tasks"
               // failure mode. Include preview of content after the DISCOVERY: marker
               // so we can see whether the LLM produced the expected format.
               const discIdx = resp.content.indexOf("DISCOVERY:");
               const discPreview = discIdx >= 0
                 ? resp.content.slice(discIdx, discIdx + 300).replace(/\n/g, "\\n")
                 : "(no DISCOVERY: marker)";
-              logger.info(`Discovery: parseDiscoveries â†’ ${tasks.length} items (content ${resp.content.length} chars, preview: ${discPreview})`);
+              logger.info(`Discovery: parseDiscoveries → ${tasks.length} items (content ${resp.content.length} chars, preview: ${discPreview})`);
               if (hasReviewPhase) {
-                // DON'T post yet â€” wait for review phase
+                // DON'T post yet — wait for review phase
                 if (tasks.length > 0) {
                   logger.info(`Discovery: found ${tasks.length} items (pending review)`);
                 }
               } else {
-                // No review phase â€” post discoveries immediately (backward compat)
+                // No review phase — post discoveries immediately (backward compat)
                 if (tasks.length > 0) {
                   logger.info(`Discovery: found ${tasks.length} items, posting to coordinator`);
                   await postDiscoveries(config.coordinatorUrl, config.agentId, tasks);
@@ -789,7 +789,7 @@ export async function runAgentLoop(
 
               // Parse and process review actions
               const actions = parseReviewActions(resp.content);
-              logger.debug(`Review: parsed ${actions.length} actions â€” ${actions.map((a) => a.type).join(", ") || "none"}`);
+              logger.debug(`Review: parsed ${actions.length} actions — ${actions.map((a) => a.type).join(", ") || "none"}`);
               if (actions.length > 0) {
                 const result = await processReviewActions(
                   config.coordinatorUrl, config.agentId, config.agentName, actions
@@ -830,7 +830,7 @@ export async function runAgentLoop(
               // dragging the agent hours past the orchestrator's timeout.
               const termReason = checkTermination();
               if (termReason) {
-                logger.warn(`Work-stealing: terminating â€” ${termReason}`);
+                logger.warn(`Work-stealing: terminating — ${termReason}`);
                 exitReason = termReason;
                 break;
               }
@@ -840,7 +840,7 @@ export async function runAgentLoop(
               // starting work it can't afford to complete.
               const quotaBlock = await quotaBlocksNextTask();
               if (quotaBlock) {
-                logger.warn(`Work-stealing: stopping â€” quota ${quotaBlock}`);
+                logger.warn(`Work-stealing: stopping — quota ${quotaBlock}`);
                 exitReason = "rate_limited";
                 break;
               }
@@ -851,7 +851,7 @@ export async function runAgentLoop(
               await processInterrupts();
               await processProtocolActions();
               if ((protocol.phase as string) === "idle" && summary) {
-                logger.debug("Work-stealing: protocol idle â€” exiting loop");
+                logger.debug("Work-stealing: protocol idle — exiting loop");
                 break;
               }
 
@@ -862,7 +862,7 @@ export async function runAgentLoop(
               if (!task) {
                 emptyRetries++;
                 if (emptyRetries > MAX_EMPTY_RETRIES) {
-                  logger.info(`Work-stealing: pool empty after ${MAX_EMPTY_RETRIES} retries â€” done`);
+                  logger.info(`Work-stealing: pool empty after ${MAX_EMPTY_RETRIES} retries — done`);
                   poolExhaustedLastCycle = true;
                   break;
                 }
@@ -878,7 +878,7 @@ export async function runAgentLoop(
 
               logger.info(`Work-stealing: claimed "${task.description.slice(0, 80)}"`);
 
-              // Resolve effort for this task â€” upgrade based on severity parsed from description.
+              // Resolve effort for this task — upgrade based on severity parsed from description.
               // Note: phase.maxTurns is intentionally NOT honored here (unlike phaseEffortProfile).
               // Execute budget comes entirely from the profile because per-task severity upgrade
               // drives the turn count; a phase-level override would hide that signal.
@@ -890,7 +890,7 @@ export async function runAgentLoop(
               const upgraded = upgradeEffort(baseLevel, { severity });
               const execProfile = EFFORT_PROFILES[upgraded];
               if (upgraded !== baseLevel) {
-                logger.info(`Effort upgrade: ${baseLevel} â†’ ${upgraded} (severity=${severity})`);
+                logger.info(`Effort upgrade: ${baseLevel} → ${upgraded} (severity=${severity})`);
               } else {
                 logger.debug(`Effort: ${upgraded} (model=${execProfile.model}, maxTurns=${execProfile.maxTurns})`);
               }
@@ -902,7 +902,7 @@ export async function runAgentLoop(
               const freshExec = config.freshSessionPerTask === true;
               const resp = await send(taskPrompt, { model: execProfile.model, thinking: execProfile.thinking, maxTurns: execProfile.maxTurns, allowedTools: execTools, disallowedTools: execBlocked, freshSession: freshExec });
 
-              // Detect rate limit â€” pause and wait for reset instead of wasting turns.
+              // Detect rate limit — pause and wait for reset instead of wasting turns.
               // F3: cap the wait to avoid hour-long resumes past the run deadline,
               // and if the wait itself would exceed our remaining budget, abort
               // the task cleanly instead of sleeping through the end of the run.
@@ -917,10 +917,10 @@ export async function runAgentLoop(
                 if (waitMs < rawWaitMs) {
                   const rawMin = Math.ceil(rawWaitMs / 60_000);
                   const cappedMin = Math.ceil(waitMs / 60_000);
-                  logger.warn(`Work-stealing: rate limit wait capped ${rawMin}min â†’ ${cappedMin}min`);
+                  logger.warn(`Work-stealing: rate limit wait capped ${rawMin}min → ${cappedMin}min`);
                 }
                 if (waitMs <= 0 || waitMs < 30_000) {
-                  logger.warn(`Work-stealing: remaining budget (${waitMs}ms) too short to survive rate limit â€” aborting task and exiting`);
+                  logger.warn(`Work-stealing: remaining budget (${waitMs}ms) too short to survive rate limit — aborting task and exiting`);
                   await unclaimTask(config.coordinatorUrl, task.id, config.agentId);
                   claimedThreadIds.delete(task.id);
                   exitReason = "rate_limited";
@@ -928,15 +928,15 @@ export async function runAgentLoop(
                 }
 
                 const waitMin = Math.ceil(waitMs / 60_000);
-                logger.warn(`Work-stealing: rate limited â€” pausing ${waitMin} min (capped)`);
-                // Don't mark task complete â€” it wasn't done
+                logger.warn(`Work-stealing: rate limited — pausing ${waitMin} min (capped)`);
+                // Don't mark task complete — it wasn't done
                 // Task stays claimed; other agents can't take it but it's recoverable
                 await new Promise((r) => setTimeout(r, waitMs));
 
-                // After the cap, re-check termination â€” deadline may now be reached.
+                // After the cap, re-check termination — deadline may now be reached.
                 const termAfterWait = checkTermination();
                 if (termAfterWait) {
-                  logger.warn(`Work-stealing: post-rate-limit ${termAfterWait} â€” aborting task`);
+                  logger.warn(`Work-stealing: post-rate-limit ${termAfterWait} — aborting task`);
                   await unclaimTask(config.coordinatorUrl, task.id, config.agentId);
                   claimedThreadIds.delete(task.id);
                   exitReason = termAfterWait;
@@ -949,16 +949,16 @@ export async function runAgentLoop(
                 if (!retryResp.rateLimited) {
                   if (retryResp.content.includes(DONE_MARKER)) {
                     const taskSummary = retryResp.content.split(DONE_MARKER)[1]?.trim() || "Done";
-                    logger.info(`Work-stealing: completed after retry â€” "${taskSummary.slice(0, 80)}"`);
+                    logger.info(`Work-stealing: completed after retry — "${taskSummary.slice(0, 80)}"`);
                     await completeTask(config.coordinatorUrl, task.id, config.agentId, taskSummary);
                     tasksDone++;
                   } else {
-                    logger.warn(`Work-stealing: aborting task after retry (no DONE:) â€” unclaiming thread=${task.id}`);
+                    logger.warn(`Work-stealing: aborting task after retry (no DONE:) — unclaiming thread=${task.id}`);
                     await unclaimTask(config.coordinatorUrl, task.id, config.agentId);
                     claimedThreadIds.delete(task.id);
                   }
                 } else {
-                  logger.error("Work-stealing: still rate limited after wait â€” stopping");
+                  logger.error("Work-stealing: still rate limited after wait — stopping");
                   break;
                 }
                 continue;
@@ -966,16 +966,16 @@ export async function runAgentLoop(
 
               // Only mark complete when the agent actually produced a DONE: marker.
               // Previously we took the first 200 chars of the response as the
-              // "summary" and marked complete anyway â€” which resolved threads
+              // "summary" and marked complete anyway — which resolved threads
               // with partial/unrelated content (e.g. "Je vais explorer..."),
               // blocking the real work from ever happening.
               if (resp.content.includes(DONE_MARKER)) {
                 const taskSummary = resp.content.split(DONE_MARKER)[1]?.trim() || "Done";
-                logger.info(`Work-stealing: completed â€” "${taskSummary.slice(0, 80)}"`);
+                logger.info(`Work-stealing: completed — "${taskSummary.slice(0, 80)}"`);
                 await completeTask(config.coordinatorUrl, task.id, config.agentId, taskSummary);
                 tasksDone++;
               } else {
-                logger.warn(`Work-stealing: aborting task (no DONE: marker) â€” unclaiming thread=${task.id}`);
+                logger.warn(`Work-stealing: aborting task (no DONE: marker) — unclaiming thread=${task.id}`);
                 await unclaimTask(config.coordinatorUrl, task.id, config.agentId);
                 claimedThreadIds.delete(task.id);
               }
@@ -992,10 +992,10 @@ export async function runAgentLoop(
         if (!hasLoopPhase) break;
         if (!poolExhaustedLastCycle) break;
         if (tasksDoneLastCycle === 0) {
-          logger.info(`Cycle ${cycle}: no tasks done â€” not re-discovering`);
+          logger.info(`Cycle ${cycle}: no tasks done — not re-discovering`);
           break;
         }
-        logger.info(`Cycle ${cycle}: ${tasksDoneLastCycle} tasks done, pool exhausted â€” will re-discover`);
+        logger.info(`Cycle ${cycle}: ${tasksDoneLastCycle} tasks done, pool exhausted — will re-discover`);
         }
         // Only stamp "done" if no earlier phase/work-stealing loop set a terminal reason
         // (aborted, deadline_exceeded, rate_limited).
@@ -1005,8 +1005,8 @@ export async function runAgentLoop(
           summary = summary || `Agent loop stopped: ${exitReason}`;
         }
       } else {
-        // â”€â”€ ONE-SHOT MODE (backward compat) â”€â”€
-        // â‘¢ WORK LOOP â€” send initial prompt, then iterate
+        // ── ONE-SHOT MODE (backward compat) ──
+        // ③ WORK LOOP — send initial prompt, then iterate
         logger.info(`Phase 3: work loop (protocol.phase=${protocol.phase})`);
         const initialResp = await send(config.prompt);
         if (initialResp.content.includes(DONE_MARKER)) {
@@ -1046,7 +1046,7 @@ export async function runAgentLoop(
         }
       }
 
-      // â‘£ RESOLUTION PHASE
+      // â'£ RESOLUTION PHASE
       if (exitReason === "done" && protocol.currentThreadId) {
         protocol.workDone();
         await processProtocolActions();
@@ -1065,7 +1065,7 @@ export async function runAgentLoop(
         ? "deadline_exceeded"
         : "aborted";
       summary = `Agent loop ${exitReason}`;
-      logger.warn(`Agent loop ${exitReason} â€” ${(err as Error).message}`);
+      logger.warn(`Agent loop ${exitReason} — ${(err as Error).message}`);
     } else {
       exitReason = "error";
       summary = (err as Error).message;
@@ -1073,7 +1073,7 @@ export async function runAgentLoop(
     }
   }
 
-  // â‘¤ CLEANUP
+  // ⑤ CLEANUP
   claude.close();
   interruptClaude.close();
   await mqtt.close().catch(() => {});

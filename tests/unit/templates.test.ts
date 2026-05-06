@@ -1,5 +1,5 @@
-﻿// tests/unit/templates.test.ts
-// Legacy template factory tests removed â€” BCE is the sole prompt source.
+// tests/unit/templates.test.ts
+// Legacy template factory tests removed — BCE is the sole prompt source.
 // Coverage for template generation is handled by bce-*.test.ts and template-engine.test.ts.
 import { describe, it, expect } from "vitest";
 import { buildProject, listTemplates } from "../../src/orchestrator/template-engine.js";

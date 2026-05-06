@@ -1,7 +1,7 @@
-﻿import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { AgentLoopConfig, AgentLoopResult, AgentLoopLogger } from "../../src/agent-loop/agent-loop.js";
 
-// â”€â”€ Mocks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Mocks ──────────────────────────────────────────────────────────────
 
 // Mock claude-stream
 const mockSend = vi.fn();
@@ -121,7 +121,7 @@ function makeConfig(overrides?: Partial<AgentLoopConfig>): AgentLoopConfig {
   };
 }
 
-// â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Tests ──────────────────────────────────────────────────────────────
 
 describe("runAgentLoop", () => {
   let runAgentLoop: (config: AgentLoopConfig, logger?: AgentLoopLogger) => Promise<AgentLoopResult>;
@@ -314,12 +314,12 @@ describe("runAgentLoop", () => {
       sessionId: "s1",
     });
 
-    const longPrompt = "## Contexte du projet\n- Langage: typescript\n- Modules: auth,shared\n## RÃ¨gles...";
+    const longPrompt = "## Contexte du projet\n- Langage: typescript\n- Modules: auth,shared\n## Règles...";
     await runAgentLoop(makeConfig({ prompt: longPrompt }), silentLogger);
 
     const callArg = mockStartWork.mock.calls[0][0];
     expect(callArg.targetModules).toEqual(["auth"]);
-    // Subject must be human-readable â€” derived from agent name + modules, not the prompt body.
+    // Subject must be human-readable — derived from agent name + modules, not the prompt body.
     expect(callArg.subject).toContain("Test Agent");
     expect(callArg.subject).toContain("auth");
     expect(callArg.subject).not.toContain("## Contexte");
@@ -363,15 +363,15 @@ describe("runAgentLoop", () => {
     const calls = (createClaudeStream as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls.length).toBeGreaterThanOrEqual(2);
 
-    // The second call is interruptClaude â€” should use haiku
+    // The second call is interruptClaude — should use haiku
     const interruptOpts = calls[1][0] as { model?: string };
     expect(interruptOpts.model).toBe("claude-haiku-4-5-20251001");
   });
 });
 
-// â”€â”€ Phased mode tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Phased mode tests ──────────────────────────────────────────────────
 
-describe("runAgentLoop â€” phased mode", () => {
+describe("runAgentLoop — phased mode", () => {
   let runAgentLoop: (config: AgentLoopConfig, logger?: AgentLoopLogger) => Promise<AgentLoopResult>;
 
   beforeEach(async () => {
@@ -394,7 +394,7 @@ describe("runAgentLoop â€” phased mode", () => {
       return null;
     });
 
-    // Reset work-stealing mocks to defaults â€” mockReset clears both history
+    // Reset work-stealing mocks to defaults — mockReset clears both history
     // AND any queued mockResolvedValueOnce/mockImplementation from prior tests.
     mockSend.mockReset();
     mockParseDiscoveries.mockReset();
@@ -595,7 +595,7 @@ describe("runAgentLoop â€” phased mode", () => {
 
     const loopPromise = runAgentLoop(makePhasedConfig(), silentLogger);
 
-    // Advance past the EMPTY_WAIT_MS (10s) timers â€” the loop will hit 3 retries
+    // Advance past the EMPTY_WAIT_MS (10s) timers — the loop will hit 3 retries
     // after the late task is done, then drain with retries
     for (let i = 0; i < 10; i++) {
       await vi.advanceTimersByTimeAsync(10_000);
@@ -623,7 +623,7 @@ describe("runAgentLoop â€” phased mode", () => {
       sessionId: "s1",
     });
 
-    // Config WITHOUT phases field â€” should work like classic one-shot
+    // Config WITHOUT phases field — should work like classic one-shot
     const result = await runAgentLoop(makeConfig(), silentLogger);
 
     expect(result.exitReason).toBe("done");
@@ -674,7 +674,7 @@ describe("runAgentLoop â€” phased mode", () => {
 
     const result = await loopPromise;
 
-    // The execute prompt is "Fix this: {{params.current_task}}" â€” should be substituted
+    // The execute prompt is "Fix this: {{params.current_task}}" — should be substituted
     // mockSend call 0 = discovery prompt, call 1 = execute with task description
     expect(mockSend).toHaveBeenCalledTimes(2);
     const executePrompt = mockSend.mock.calls[1][0] as string;
@@ -774,7 +774,7 @@ describe("runAgentLoop â€” phased mode", () => {
     });
     mockParseDiscoveries.mockReturnValue([]);
 
-    // Infinite tasks â€” always returns one
+    // Infinite tasks — always returns one
     mockClaimNextTask.mockResolvedValue({
       id: "t-inf",
       description: "Infinite task",
@@ -782,7 +782,7 @@ describe("runAgentLoop â€” phased mode", () => {
       severity: undefined,
     });
 
-    // LLM never says DONE â€” just keeps working
+    // LLM never says DONE — just keeps working
     mockSend.mockResolvedValue({
       content: "Still fixing...",
       toolCalls: [],
@@ -888,7 +888,7 @@ describe("runAgentLoop â€” phased mode", () => {
 
     const config = makeConfig({
       phases: [
-        // effort omitted â€” auto resolves to low (read_only)
+        // effort omitted — auto resolves to low (read_only)
         { name: "discover", prompt: "Scan", toolsMode: "read_only", loop: false },
         { name: "execute",  prompt: "Fix",  toolsMode: "full",      loop: true },
       ],
@@ -905,7 +905,7 @@ describe("runAgentLoop â€” phased mode", () => {
     for (let i = 0; i < 5; i++) await vi.advanceTimersByTimeAsync(10_000);
     await loopPromise;
 
-    // discover: tools_mode=read_only â†’ auto â†’ low â†’ haiku, 2 turns
+    // discover: tools_mode=read_only → auto → low → haiku, 2 turns
     expect(mockSend.mock.calls[0][1]).toMatchObject({
       model: "claude-haiku-4-5-20251001",
       thinking: "none",
@@ -927,7 +927,7 @@ describe("runAgentLoop â€” phased mode", () => {
     mockClaimNextTask.mockImplementation(async () => {
       claimCall++;
       if (claimCall === 1) {
-        return { id: "t-1", description: "critical: src/auth.ts:42 â€” null pointer", file: undefined, severity: undefined };
+        return { id: "t-1", description: "critical: src/auth.ts:42 — null pointer", file: undefined, severity: undefined };
       }
       return null;
     });
@@ -940,7 +940,7 @@ describe("runAgentLoop â€” phased mode", () => {
     const config = makeConfig({
       phases: [
         { name: "discover", prompt: "Scan", toolsMode: "read_only", loop: false, effort: "low" },
-        // execute starts at low â€” critical nudges it up to mid (Sonnet).
+        // execute starts at low — critical nudges it up to mid (Sonnet).
         // Previously this went to high (Opus), but Opus burned its budget on
         // exploration before reaching DONE in the raid scenario.
         { name: "execute",  prompt: "Fix: {{params.current_task}}", toolsMode: "full", loop: true, effort: "low" },
@@ -973,7 +973,7 @@ describe("runAgentLoop â€” phased mode", () => {
     mockClaimNextTask.mockImplementation(async () => {
       claimCall++;
       if (claimCall === 1) {
-        return { id: "t-1", description: "minor: src/a.ts â€” typo", file: undefined, severity: undefined };
+        return { id: "t-1", description: "minor: src/a.ts — typo", file: undefined, severity: undefined };
       }
       return null;
     });
@@ -994,7 +994,7 @@ describe("runAgentLoop â€” phased mode", () => {
     for (let i = 0; i < 5; i++) await vi.advanceTimersByTimeAsync(10_000);
     await loopPromise;
 
-    // minor severity â†’ no upgrade, execute stays at mid (sonnet, 5 turns)
+    // minor severity → no upgrade, execute stays at mid (sonnet, 5 turns)
     const executeCall = mockSend.mock.calls[1];
     expect(executeCall[1]).toMatchObject({
       model: "claude-sonnet-4-6",
@@ -1016,7 +1016,7 @@ describe("runAgentLoop â€” phased mode", () => {
     mockClaimNextTask.mockImplementation(async () => {
       claimCall++;
       if (claimCall === 1) {
-        return { id: "t-1", description: "critical: src/auth.ts â€” bug", file: undefined, severity: undefined };
+        return { id: "t-1", description: "critical: src/auth.ts — bug", file: undefined, severity: undefined };
       }
       return null;
     });
@@ -1066,7 +1066,7 @@ describe("runAgentLoop â€” phased mode", () => {
           effort: "low",                 // profile: haiku + none + 8
           model: "claude-opus-4-6",      // override model only
           thinking: "ultrathink",        // override thinking only
-          // maxTurns NOT overridden â€” should stay at profile default (8)
+          // maxTurns NOT overridden — should stay at profile default (8)
         },
         { name: "execute",  prompt: "Fix", toolsMode: "full", loop: true, effort: "high" },
       ],
@@ -1098,7 +1098,7 @@ describe("runAgentLoop â€” phased mode", () => {
         {
           name: "discover", prompt: "Scan", toolsMode: "read_only", loop: false,
           effort: "low",
-          maxTurns: 0,  // nonsensical â€” should fall back to profile (15)
+          maxTurns: 0,  // nonsensical — should fall back to profile (15)
         },
         { name: "execute", prompt: "Fix", toolsMode: "full", loop: true, effort: "high" },
       ],
@@ -1194,7 +1194,7 @@ describe("runAgentLoop â€” phased mode", () => {
       "Bash",
     ]);
 
-    // review (none): only MCP tools â€” no user tools at all
+    // review (none): only MCP tools — no user tools at all
     const reviewOpts = mockSend.mock.calls[1][1];
     expect(reviewOpts.allowedTools).toEqual([
       "mcp__coordinator__list_threads",
@@ -1275,7 +1275,7 @@ describe("runAgentLoop â€” phased mode", () => {
     for (let i = 0; i < 5; i++) await vi.advanceTimersByTimeAsync(10_000);
     await loopPromise;
 
-    // Nested-agent tools (Task / Agent) stay blocked even in full mode â€” they
+    // Nested-agent tools (Task / Agent) stay blocked even in full mode — they
     // spawn sub-sessions whose tool calls escape the outer turn budget.
     const blocked = mockSend.mock.calls[0][1].disallowedTools;
     expect(blocked).toEqual(expect.arrayContaining(["Task", "Agent"]));
@@ -1288,10 +1288,10 @@ describe("runAgentLoop â€” phased mode", () => {
 
     // Cycle 1: discover finds 1, review posts 1, execute claims 1, pool empty
     // Cycle 2: discover finds 1 more, review posts 1, execute claims 1, pool empty
-    // Cycle 3: discover finds 0, no posts â†’ stop (tasksDoneLastCycle === 0)
-    // Claim call 1: t-1; calls 2-5: null (4 nulls â†’ break cycle 1 execute);
+    // Cycle 3: discover finds 0, no posts → stop (tasksDoneLastCycle === 0)
+    // Claim call 1: t-1; calls 2-5: null (4 nulls → break cycle 1 execute);
     // call 6: t-2; calls 7+: null (break cycle 2 execute). Cycle 3 discover
-    // finds nothing â†’ break.
+    // finds nothing → break.
     let claimCall = 0;
     mockClaimNextTask.mockImplementation(async () => {
       claimCall++;
@@ -1308,7 +1308,7 @@ describe("runAgentLoop â€” phased mode", () => {
     mockSend.mockResolvedValueOnce({ content: "DISCOVERY:\nitem 2", toolCalls: [], costUsd: 0.01, durationMs: 100, sessionId: "s1" });
     mockSend.mockResolvedValueOnce({ content: "REVIEW:\nNOUVEAU | item 2", toolCalls: [], costUsd: 0.01, durationMs: 100, sessionId: "s1" });
     mockSend.mockResolvedValueOnce({ content: "DONE: fixed 2", toolCalls: [], costUsd: 0.02, durationMs: 300, sessionId: "s1" });
-    // discover+review (cycle 3 â€” no tasks to claim, stops)
+    // discover+review (cycle 3 — no tasks to claim, stops)
     mockSend.mockResolvedValue({ content: "DISCOVERY:\n(aucune trouvaille)", toolCalls: [], costUsd: 0.01, durationMs: 100, sessionId: "s1" });
 
     mockParseDiscoveries.mockReturnValue([{ id: "", description: "item", file: undefined, line: undefined, severity: undefined }]);
@@ -1347,7 +1347,7 @@ describe("runAgentLoop â€” phased mode", () => {
 
     mockSend.mockResolvedValueOnce({ content: "DISCOVERY:\nitem", toolCalls: [], costUsd: 0.01, durationMs: 100, sessionId: "s1" });
     mockSend.mockResolvedValueOnce({ content: "REVIEW:\nNOUVEAU | item", toolCalls: [], costUsd: 0.01, durationMs: 100, sessionId: "s1" });
-    // Execute phase: LLM responds without DONE: â€” should unclaim, not complete
+    // Execute phase: LLM responds without DONE: — should unclaim, not complete
     mockSend.mockResolvedValueOnce({ content: "Je vais explorer le projet...", toolCalls: [], costUsd: 0.02, durationMs: 300, sessionId: "s1" });
 
     mockParseDiscoveries.mockReturnValue([{ id: "", description: "item", file: undefined, line: undefined, severity: undefined }]);
@@ -1432,7 +1432,7 @@ describe("runAgentLoop â€” phased mode", () => {
     for (let i = 0; i < 5; i++) await vi.advanceTimersByTimeAsync(10_000);
     await loopPromise;
 
-    // full mode â†’ pass the session-level list through (no filter)
+    // full mode → pass the session-level list through (no filter)
     const discoverOpts = mockSend.mock.calls[0][1];
     expect(discoverOpts.allowedTools).toEqual(["Read", "Edit", "mcp__coordinator__list_threads"]);
   });

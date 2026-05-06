@@ -1,4 +1,4 @@
-﻿// src/types.ts
+// src/types.ts
 import type { ChildProcess } from "child_process";
 
 export interface AgentConfig {
@@ -12,8 +12,8 @@ export interface AgentConfig {
   modules?: string[];      // modules this agent works on (for coordination)
   read_only?: boolean;
   launch_delay?: number; // Seconds to wait before launching (overrides stagger for group launching)
-  // BCE pipeline outputs â€” required for coordinated runs, populated by buildProjectFromBce
-  hooks: Record<string, string>; // lifecycle â†’ assembled shell script
+  // BCE pipeline outputs — required for coordinated runs, populated by buildProjectFromBce
+  hooks: Record<string, string>; // lifecycle → assembled shell script
   envVars: Record<string, string>;
   mcpTools: string[];
   phases?: Array<{
@@ -34,12 +34,12 @@ export interface MiniProject {
   workspace: {
     type: "worktree" | "shared" | "none";
     base?: string;
-    baseRef?: string; // git ref (tag, branch, sha) for the worktree snapshot â€” defaults to HEAD
+    baseRef?: string; // git ref (tag, branch, sha) for the worktree snapshot — defaults to HEAD
   };
   stagger: {
     mode: "fixed" | "random" | "sequential";
-    // Pour "fixed" et "random": dÃ©lai entre chaque lancement [min, max] en secondes
-    // Pour "sequential": ignorÃ© â€” chaque agent attend la fin du prÃ©cÃ©dent
+    // Pour "fixed" et "random": délai entre chaque lancement [min, max] en secondes
+    // Pour "sequential": ignoré — chaque agent attend la fin du précédent
     delay?: [number, number];
   };
   timeout_minutes?: number;
@@ -60,7 +60,7 @@ export interface AgentProcess {
 export interface WorkspaceResult {
   type: "worktree" | "shared" | "none";
   basePath: string;
-  paths: Map<string, string>; // agent_id â†’ workspace path
+  paths: Map<string, string>; // agent_id → workspace path
 }
 
 export interface CoordinatorMetrics {

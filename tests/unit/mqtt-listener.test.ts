@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EventEmitter } from "events";
 
 // Mock mqtt module before importing the listener
@@ -211,7 +211,7 @@ describe("MqttListener", () => {
       simulateMessage("coordinator/broadcast", { agent_id: "a3", message: "msg2" });
 
       expect(listener.peek()).toBe(2);
-      expect(listener.peek()).toBe(2); // still 2 â€” not consumed
+      expect(listener.peek()).toBe(2); // still 2 — not consumed
     });
 
     it("returns empty array when no messages queued", async () => {

@@ -1,4 +1,4 @@
-﻿export type EffortLevel = "low" | "mid" | "high" | "max" | "auto";
+export type EffortLevel = "low" | "mid" | "high" | "max" | "auto";
 
 export type ConcreteEffortLevel = Exclude<EffortLevel, "auto">;
 
@@ -20,7 +20,7 @@ export const EFFORT_ORDER: Record<ConcreteEffortLevel, number> = {
 };
 
 export const EFFORT_PROFILES: Record<ConcreteEffortLevel, EffortProfile> = {
-  // maxTurns needs headroom when thinking is enabled â€” thinking tokens count
+  // maxTurns needs headroom when thinking is enabled — thinking tokens count
   // against the turn limit, and with tools in the loop a "turn" can burn
   // multiple explorations before the model even attempts to synthesise text.
   low:  { model: "claude-haiku-4-5-20251001", thinking: "none",       maxTurns: 15 },
@@ -41,7 +41,7 @@ export function isThinkingLevel(v: unknown): v is ThinkingLevel {
 }
 
 // Trigger keyword appended to the user prompt for Claude CLI extended thinking.
-// "none" returns empty â€” caller should skip append.
+// "none" returns empty — caller should skip append.
 export function thinkingKeyword(level: ThinkingLevel): string {
   switch (level) {
     case "none":       return "";
@@ -87,7 +87,7 @@ export function upgradeEffort(
   let level = base;
   // Critical-severity tasks used to auto-escalate all the way to "high" (Opus +
   // think-hard). In practice Opus tended to burn its turn budget on exploration
-  // before producing DONE â€” Sonnet handles the "write a failing test" workload
+  // before producing DONE — Sonnet handles the "write a failing test" workload
   // fine. We now only nudge "low" up to "mid" on critical, so presets that
   // explicitly pick an effort level are respected.
   if (signals.severity === "critical" && EFFORT_ORDER[level] < EFFORT_ORDER.mid) {

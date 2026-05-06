@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Comprehensive coverage tests for BCE engine.
  * Targets all uncovered branches and lines identified in the v8 coverage report.
  */
@@ -42,10 +42,10 @@ function tmpPath(suffix: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// writer.ts â€” 0% covered, needs full suite
+// writer.ts — 0% covered, needs full suite
 // ---------------------------------------------------------------------------
 
-describe('writer.ts â€” writeOutput', () => {
+describe('writer.ts — writeOutput', () => {
   const cleanupDirs: string[] = [];
 
   afterEach(() => {
@@ -245,10 +245,10 @@ describe('writer.ts â€” writeOutput', () => {
 // Those tests belong in the promptweave package, not in essaim. Removed per Task 12.
 
 // ---------------------------------------------------------------------------
-// compose.ts â€” error paths + inject/disable/override_params
+// compose.ts — error paths + inject/disable/override_params
 // ---------------------------------------------------------------------------
 
-describe('compose.ts â€” uncovered branches', () => {
+describe('compose.ts — uncovered branches', () => {
   it('throws when override_sections references a non-active behavior', () => {
     const behavior = makeBehavior({
       name: 'active-one',
@@ -444,7 +444,7 @@ describe('compose.ts â€” uncovered branches', () => {
     const mockRegistry = Registry.load(FIXTURES);
     mockRegistry.compositions.set('param-override-ghost', rule);
 
-    // Should not throw â€” just silently skip
+    // Should not throw — just silently skip
     const result = applyCompositionRules(behaviorsMap, mockRegistry);
     expect(result.appliedRules).toContain('param-override-ghost');
   });
@@ -488,10 +488,10 @@ describe('compose.ts â€” uncovered branches', () => {
 });
 
 // ---------------------------------------------------------------------------
-// assemble.ts â€” buildDefaultParams switch, hook tiebreak, non-blocking, mergeMcpConfig
+// assemble.ts — buildDefaultParams switch, hook tiebreak, non-blocking, mergeMcpConfig
 // ---------------------------------------------------------------------------
 
-describe('assemble.ts â€” buildDefaultParams switch cases', () => {
+describe('assemble.ts — buildDefaultParams switch cases', () => {
   it('defaults number params to 0', () => {
     const behavior = makeBehavior({
       name: 'num-beh',
@@ -565,7 +565,7 @@ describe('assemble.ts â€” buildDefaultParams switch cases', () => {
   });
 });
 
-describe('assemble.ts â€” assembleHooks tiebreak and non-blocking', () => {
+describe('assemble.ts — assembleHooks tiebreak and non-blocking', () => {
   it('sorts hooks alphabetically by behavior name when order is the same', () => {
     const behaviorA = makeBehavior({
       name: 'alpha',
@@ -649,10 +649,10 @@ describe('assemble.ts â€” assembleHooks tiebreak and non-blocking', () => {
 // The writeOutput function (which wraps mergeMcpConfig) IS tested above via the public API.
 
 // ---------------------------------------------------------------------------
-// compose.ts â€” matchRules 'any' condition branch (line 22)
+// compose.ts — matchRules 'any' condition branch (line 22)
 // ---------------------------------------------------------------------------
 
-describe('compose.ts â€” matchRules any condition', () => {
+describe('compose.ts — matchRules any condition', () => {
   it('matches when any condition is satisfied', () => {
     const behaviorX = makeBehavior({ name: 'beh-x', sections: { '010-test': { prompt: 'x' } } });
 
@@ -691,10 +691,10 @@ describe('compose.ts â€” matchRules any condition', () => {
 });
 
 // ---------------------------------------------------------------------------
-// compose.ts â€” matchRules 'none' condition branch
+// compose.ts — matchRules 'none' condition branch
 // ---------------------------------------------------------------------------
 
-describe('compose.ts â€” matchRules none condition', () => {
+describe('compose.ts — matchRules none condition', () => {
   it('does not match when a none-condition behavior is active', () => {
     const rule: CompositionRule = {
       name: 'none-fail-rule',
@@ -714,10 +714,10 @@ describe('compose.ts â€” matchRules none condition', () => {
 });
 
 // ---------------------------------------------------------------------------
-// compose.ts â€” matchRules sorting by priority (different priorities)
+// compose.ts — matchRules sorting by priority (different priorities)
 // ---------------------------------------------------------------------------
 
-describe('compose.ts â€” matchRules priority sorting', () => {
+describe('compose.ts — matchRules priority sorting', () => {
   it('sorts matched rules by descending priority', () => {
     const rule1: CompositionRule = {
       name: 'low-prio',
@@ -749,10 +749,10 @@ describe('compose.ts â€” matchRules priority sorting', () => {
 });
 
 // ---------------------------------------------------------------------------
-// compose.ts â€” matchRules loop edge cases (lines 30-35 branches)
+// compose.ts — matchRules loop edge cases (lines 30-35 branches)
 // ---------------------------------------------------------------------------
 
-describe('compose.ts â€” matchRules loop iteration branches', () => {
+describe('compose.ts — matchRules loop iteration branches', () => {
   it('handles single matched rule without entering tie-check loop', () => {
     const rule: CompositionRule = {
       name: 'solo-rule',
@@ -774,7 +774,7 @@ describe('compose.ts â€” matchRules loop iteration branches', () => {
     expect(matched[0].name).toBe('solo-rule');
   });
 
-  it('enters loop with same priority but different all â€” does not throw', () => {
+  it('enters loop with same priority but different all — does not throw', () => {
     const cleanRegistry = Registry.load(FIXTURES);
     cleanRegistry.compositions.clear();
 
@@ -801,7 +801,7 @@ describe('compose.ts â€” matchRules loop iteration branches', () => {
     expect(matched).toHaveLength(2);
   });
 
-  it('enters loop with different priorities â€” skips if-body', () => {
+  it('enters loop with different priorities — skips if-body', () => {
     const cleanRegistry = Registry.load(FIXTURES);
     cleanRegistry.compositions.clear();
 
@@ -851,17 +851,17 @@ describe('compose.ts â€” matchRules loop iteration branches', () => {
     cleanRegistry.compositions.set('no-prio-b', rule2);
 
     const active = new Set(['beh-noprio', 'beh-noprio-other']);
-    // Both match, same undefined priority (0), different all keys â€” no throw
+    // Both match, same undefined priority (0), different all keys — no throw
     const matched = matchRules(active, cleanRegistry);
     expect(matched).toHaveLength(2);
   });
 });
 
 // ---------------------------------------------------------------------------
-// resolve.ts â€” preset profile/model fallback branches (lines 26, 36)
+// resolve.ts — preset profile/model fallback branches (lines 26, 36)
 // ---------------------------------------------------------------------------
 
-describe('resolve.ts â€” preset profile and model fallback', () => {
+describe('resolve.ts — preset profile and model fallback', () => {
   it('uses preset profile when agent does not specify profile', () => {
     const registry = Registry.load(FIXTURES);
     const agent: Agent = {
@@ -921,10 +921,10 @@ describe('resolve.ts â€” preset profile and model fallback', () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolve.ts â€” resolveParams preset/agent/launch param layering (line 68+)
+// resolve.ts — resolveParams preset/agent/launch param layering (line 68+)
 // ---------------------------------------------------------------------------
 
-describe('resolve.ts â€” resolveParams full layering', () => {
+describe('resolve.ts — resolveParams full layering', () => {
   it('preset params override behavior defaults', () => {
     const behavior = makeBehavior({
       name: 'layer-beh',
@@ -967,10 +967,10 @@ describe('resolve.ts â€” resolveParams full layering', () => {
 });
 
 // ---------------------------------------------------------------------------
-// assemble.ts â€” buildDefaultParams string case (line 12)
+// assemble.ts — buildDefaultParams string case (line 12)
 // ---------------------------------------------------------------------------
 
-describe('assemble.ts â€” buildDefaultParams string case', () => {
+describe('assemble.ts — buildDefaultParams string case', () => {
   it('defaults string params to empty string when no default given', () => {
     const behavior = makeBehavior({
       name: 'str-default-beh',
@@ -987,10 +987,10 @@ describe('assemble.ts â€” buildDefaultParams string case', () => {
 });
 
 // ---------------------------------------------------------------------------
-// compose.ts â€” priority tie with identical when.all (lines 33-39)
+// compose.ts — priority tie with identical when.all (lines 33-39)
 // ---------------------------------------------------------------------------
 
-describe('compose.ts â€” matchRules priority conflict detection', () => {
+describe('compose.ts — matchRules priority conflict detection', () => {
   it('throws when two rules share the same priority and same when.all combination', () => {
     const behavior = makeBehavior({
       name: 'trigger-beh',
@@ -1055,11 +1055,11 @@ describe('compose.ts â€” matchRules priority conflict detection', () => {
 });
 
 // ---------------------------------------------------------------------------
-// validate.ts â€” checkType string case (line 151)
+// validate.ts — checkType string case (line 151)
 // ---------------------------------------------------------------------------
 
-describe('validate.ts â€” checkType string branch', () => {
-  it('validates string type â€” passes for string value', () => {
+describe('validate.ts — checkType string branch', () => {
+  it('validates string type — passes for string value', () => {
     const behavior = makeBehavior({
       name: 'str-check-beh',
       sections: { '010-test': { prompt: 'test' } },
@@ -1072,7 +1072,7 @@ describe('validate.ts â€” checkType string branch', () => {
     expect(errors).toEqual([]);
   });
 
-  it('validates string type â€” errors for non-string value', () => {
+  it('validates string type — errors for non-string value', () => {
     const behavior = makeBehavior({
       name: 'str-check-beh',
       sections: { '010-test': { prompt: 'test' } },
@@ -1087,10 +1087,10 @@ describe('validate.ts â€” checkType string branch', () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolve.ts â€” emptyValueForType string case (line 92)
+// resolve.ts — emptyValueForType string case (line 92)
 // ---------------------------------------------------------------------------
 
-describe('resolve.ts â€” emptyValueForType string case', () => {
+describe('resolve.ts — emptyValueForType string case', () => {
   it('returns empty string for string type param without default', () => {
     const behavior = makeBehavior({
       name: 'string-empty-beh',
@@ -1109,10 +1109,10 @@ describe('resolve.ts â€” emptyValueForType string case', () => {
 });
 
 // ---------------------------------------------------------------------------
-// validate.ts â€” required param missing, checkType branches
+// validate.ts — required param missing, checkType branches
 // ---------------------------------------------------------------------------
 
-describe('validate.ts â€” required param missing (lines 127-130)', () => {
+describe('validate.ts — required param missing (lines 127-130)', () => {
   it('errors when a required param is missing and has no default', () => {
     const behavior = makeBehavior({
       name: 'needs-param',
@@ -1146,7 +1146,7 @@ describe('validate.ts â€” required param missing (lines 127-130)', () => {
   });
 });
 
-describe('validate.ts â€” checkType branches (lines 151-161)', () => {
+describe('validate.ts — checkType branches (lines 151-161)', () => {
   const registry = Registry.load(FIXTURES);
 
   function makeRegistryWithParam(type: string) {
@@ -1162,61 +1162,61 @@ describe('validate.ts â€” checkType branches (lines 151-161)', () => {
     return r;
   }
 
-  it('validates boolean type â€” passes for boolean', () => {
+  it('validates boolean type — passes for boolean', () => {
     const r = makeRegistryWithParam('boolean');
     const errors = validateBehaviors(['typed-beh'], r, { 'typed-beh': { val: true } });
     expect(errors).toEqual([]);
   });
 
-  it('validates boolean type â€” errors for non-boolean', () => {
+  it('validates boolean type — errors for non-boolean', () => {
     const r = makeRegistryWithParam('boolean');
     const errors = validateBehaviors(['typed-beh'], r, { 'typed-beh': { val: 'not-bool' } });
     expect(errors.some((e) => e.includes('boolean'))).toBe(true);
   });
 
-  it('validates number type â€” passes for number', () => {
+  it('validates number type — passes for number', () => {
     const r = makeRegistryWithParam('number');
     const errors = validateBehaviors(['typed-beh'], r, { 'typed-beh': { val: 42 } });
     expect(errors).toEqual([]);
   });
 
-  it('validates number type â€” errors for non-number', () => {
+  it('validates number type — errors for non-number', () => {
     const r = makeRegistryWithParam('number');
     const errors = validateBehaviors(['typed-beh'], r, { 'typed-beh': { val: 'not-a-number' } });
     expect(errors.some((e) => e.includes('number'))).toBe(true);
   });
 
-  it('validates string[] type â€” passes for string array', () => {
+  it('validates string[] type — passes for string array', () => {
     const r = makeRegistryWithParam('string[]');
     const errors = validateBehaviors(['typed-beh'], r, { 'typed-beh': { val: ['a', 'b'] } });
     expect(errors).toEqual([]);
   });
 
-  it('validates string[] type â€” errors for mixed array', () => {
+  it('validates string[] type — errors for mixed array', () => {
     const r = makeRegistryWithParam('string[]');
     const errors = validateBehaviors(['typed-beh'], r, { 'typed-beh': { val: ['a', 123] } });
     expect(errors.some((e) => e.includes('string[]'))).toBe(true);
   });
 
-  it('validates string[] type â€” errors for non-array', () => {
+  it('validates string[] type — errors for non-array', () => {
     const r = makeRegistryWithParam('string[]');
     const errors = validateBehaviors(['typed-beh'], r, { 'typed-beh': { val: 'not-array' } });
     expect(errors.some((e) => e.includes('string[]'))).toBe(true);
   });
 
-  it('validates number[] type â€” passes for number array', () => {
+  it('validates number[] type — passes for number array', () => {
     const r = makeRegistryWithParam('number[]');
     const errors = validateBehaviors(['typed-beh'], r, { 'typed-beh': { val: [1, 2, 3] } });
     expect(errors).toEqual([]);
   });
 
-  it('validates number[] type â€” errors for mixed array', () => {
+  it('validates number[] type — errors for mixed array', () => {
     const r = makeRegistryWithParam('number[]');
     const errors = validateBehaviors(['typed-beh'], r, { 'typed-beh': { val: [1, 'two'] } });
     expect(errors.some((e) => e.includes('number[]'))).toBe(true);
   });
 
-  it('validates unknown type â€” does not error (default case)', () => {
+  it('validates unknown type — does not error (default case)', () => {
     const r = makeRegistryWithParam('custom-type');
     const errors = validateBehaviors(['typed-beh'], r, { 'typed-beh': { val: { complex: true } } });
     expect(errors).toEqual([]);
@@ -1224,10 +1224,10 @@ describe('validate.ts â€” checkType branches (lines 151-161)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolve.ts â€” no preset + no behaviors error, emptyValueForType cases
+// resolve.ts — no preset + no behaviors error, emptyValueForType cases
 // ---------------------------------------------------------------------------
 
-describe('resolve.ts â€” error when no preset and no behaviors', () => {
+describe('resolve.ts — error when no preset and no behaviors', () => {
   it('throws when agent has neither preset nor behaviors', () => {
     const registry = Registry.load(FIXTURES);
     const agent: Agent = {
@@ -1243,7 +1243,7 @@ describe('resolve.ts â€” error when no preset and no behaviors', () => {
   });
 });
 
-describe('resolve.ts â€” emptyValueForType branches', () => {
+describe('resolve.ts — emptyValueForType branches', () => {
   it('returns 0 for number type param without default', () => {
     const behavior = makeBehavior({
       name: 'number-param-beh',
@@ -1310,10 +1310,10 @@ describe('resolve.ts â€” emptyValueForType branches', () => {
 });
 
 // ---------------------------------------------------------------------------
-// registry.ts â€” non-existent directory (line 81), YAML parse error (line 102)
+// registry.ts — non-existent directory (line 81), YAML parse error (line 102)
 // ---------------------------------------------------------------------------
 
-describe('registry.ts â€” non-existent directory', () => {
+describe('registry.ts — non-existent directory', () => {
   it('returns empty maps when a subdirectory does not exist', () => {
     const emptyPath = tmpPath('empty-registry');
     mkdirSync(emptyPath, { recursive: true });
@@ -1342,7 +1342,7 @@ describe('registry.ts â€” non-existent directory', () => {
   });
 });
 
-describe('registry.ts â€” YAML parse error', () => {
+describe('registry.ts — YAML parse error', () => {
   it('catches and records YAML parse errors', () => {
     const regPath = tmpPath('bad-yaml-registry');
     const behaviorsDir = join(regPath, 'behaviors');
@@ -1365,14 +1365,14 @@ describe('registry.ts â€” YAML parse error', () => {
 });
 
 // ---------------------------------------------------------------------------
-// pipeline.ts â€” post-composition validation after disable_behaviors (lines 48-53)
+// pipeline.ts — post-composition validation after disable_behaviors (lines 48-53)
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// pipeline.ts â€” additional branch coverage
+// pipeline.ts — additional branch coverage
 // ---------------------------------------------------------------------------
 
-describe('pipeline.ts â€” pipeline branches', () => {
+describe('pipeline.ts — pipeline branches', () => {
   it('skips unknown behaviors in the behaviors map build', () => {
     // An agent referencing a behavior not in the registry should be caught
     // at validation, but the loop at line 25 has the if(behavior) guard
@@ -1436,10 +1436,10 @@ describe('pipeline.ts â€” pipeline branches', () => {
 });
 
 // ---------------------------------------------------------------------------
-// registry.ts â€” additional branch coverage: non-yaml files ignored
+// registry.ts — additional branch coverage: non-yaml files ignored
 // ---------------------------------------------------------------------------
 
-describe('registry.ts â€” filter non-yaml files', () => {
+describe('registry.ts — filter non-yaml files', () => {
   it('ignores non-yaml files in directories', () => {
     const regPath = tmpPath('non-yaml-registry');
     const behaviorsDir = join(regPath, 'behaviors');
@@ -1491,10 +1491,10 @@ sections:
 });
 
 // ---------------------------------------------------------------------------
-// registry.ts â€” schema validation failure vs parse error
+// registry.ts — schema validation failure vs parse error
 // ---------------------------------------------------------------------------
 
-describe('registry.ts â€” schema validation failure', () => {
+describe('registry.ts — schema validation failure', () => {
   it('records validation error when YAML parses but schema fails', () => {
     const regPath = tmpPath('schema-fail-registry');
     const behaviorsDir = join(regPath, 'behaviors');
@@ -1516,7 +1516,7 @@ describe('registry.ts â€” schema validation failure', () => {
   });
 });
 
-describe('pipeline.ts â€” disable_behaviors where post-validation passes', () => {
+describe('pipeline.ts — disable_behaviors where post-validation passes', () => {
   it('succeeds when remaining behaviors are valid after disable', () => {
     // Create a setup where disable_behaviors fires but the remaining set is valid
     const regPath = tmpPath('pipeline-disable-ok');
@@ -1527,7 +1527,7 @@ describe('pipeline.ts â€” disable_behaviors where post-validation passes', 
     mkdirSync(compositionsDir, { recursive: true });
     mkdirSync(presetsDir, { recursive: true });
 
-    // Two independent behaviors â€” no dependency between them
+    // Two independent behaviors — no dependency between them
     writeFileSync(
       join(behaviorsDir, 'core-beh.yaml'),
       `name: core-beh
@@ -1568,7 +1568,7 @@ actions:
       params: {},
     };
 
-    // Should NOT throw â€” post-validation succeeds because core-beh has no deps
+    // Should NOT throw — post-validation succeeds because core-beh has no deps
     const result = runPipeline(agent, regPath, {});
     expect(result.compositionRulesApplied).toContain('strip-optional');
     expect(result.behaviors.some((b) => b.name === 'optional-beh')).toBe(false);
@@ -1578,7 +1578,7 @@ actions:
   });
 });
 
-describe('pipeline.ts â€” post-composition validation after disable', () => {
+describe('pipeline.ts — post-composition validation after disable', () => {
   it('throws when disabling a behavior causes remaining behaviors to fail validation', () => {
     // Setup: behavior A requires behavior B. A composition rule disables B.
     // After composition, A still needs B but B is gone -> post-validate error.

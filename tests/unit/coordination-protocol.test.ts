@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import {
   createCoordinationProtocol,
   type CoordinationProtocol,
@@ -7,7 +7,7 @@ import {
   type ProtocolAction,
 } from "../../src/agent-loop/coordination-protocol.js";
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers ───────────────────────────────────────────────────────────
 
 const WORK: WorkDescription = {
   subject: "Refactor auth module",
@@ -25,7 +25,7 @@ function drainActions(protocol: CoordinationProtocol): ProtocolAction[] {
   return actions;
 }
 
-// â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Tests ─────────────────────────────────────────────────────────────
 
 describe("CoordinationProtocol", () => {
   let protocol: CoordinationProtocol;
@@ -34,7 +34,7 @@ describe("CoordinationProtocol", () => {
     protocol = createCoordinationProtocol("agent-1");
   });
 
-  // â”€â”€ Initial state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Initial state ─────────────────────────────────────────────────
 
   it("starts in idle phase with no thread", () => {
     expect(protocol.phase).toBe("idle");
@@ -42,7 +42,7 @@ describe("CoordinationProtocol", () => {
     expect(protocol.nextAction()).toBeNull();
   });
 
-  // â”€â”€ startWork â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── startWork ─────────────────────────────────────────────────────
 
   it("transitions to announcing on startWork", () => {
     protocol.startWork(WORK);
@@ -58,7 +58,7 @@ describe("CoordinationProtocol", () => {
     expect(() => protocol.startWork(WORK)).toThrow('Cannot start work while in phase "announcing"');
   });
 
-  // â”€â”€ Auto-resolve path: idle â†’ announcing â†’ working â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Auto-resolve path: idle → announcing → working ────────────────
 
   it("goes directly to working when auto_resolved", () => {
     protocol.startWork(WORK);
@@ -99,7 +99,7 @@ describe("CoordinationProtocol", () => {
     expect(action).toEqual({ type: "work" });
   });
 
-  // â”€â”€ Full happy path: idle â†’ announcing â†’ waiting â†’ working â†’ resolving â†’ resolved â”€â”€
+  // ── Full happy path: idle → announcing → waiting → working → resolving → resolved ──
 
   it("follows full happy path with responses and resolution", () => {
     // 1. Start work
@@ -124,11 +124,11 @@ describe("CoordinationProtocol", () => {
 
     // 3. Receive messages from respondents
     protocol.onThreadMessage("t-3", "agent-2", "I can pause my work on session.ts");
-    // Not all respondents yet â€” no new action
+    // Not all respondents yet — no new action
     expect(protocol.nextAction()).toBeNull();
 
     protocol.onThreadMessage("t-3", "agent-3", "No conflict from my side");
-    // All respondents replied â€” ask_llm_decide queued
+    // All respondents replied — ask_llm_decide queued
     const decideAction = protocol.nextAction();
     expect(decideAction?.type).toBe("ask_llm_decide");
     if (decideAction?.type === "ask_llm_decide") {
@@ -143,7 +143,7 @@ describe("CoordinationProtocol", () => {
     const workAction = protocol.nextAction();
     expect(workAction).toEqual({ type: "work" });
 
-    // 5. Work done â€” propose resolution
+    // 5. Work done — propose resolution
     protocol.workDone();
     const proposeAction = protocol.nextAction();
     expect(proposeAction?.type).toBe("propose_resolution");
@@ -177,7 +177,7 @@ describe("CoordinationProtocol", () => {
     expect(thread?.status).toBe("resolved");
   });
 
-  // â”€â”€ Yield path: idle â†’ announcing â†’ waiting â†’ idle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Yield path: idle → announcing → waiting → idle ────────────────
 
   it("returns to idle when LLM decides to yield", () => {
     protocol.startWork(WORK);
@@ -210,7 +210,7 @@ describe("CoordinationProtocol", () => {
     expect(thread?.status).toBe("cancelled");
   });
 
-  // â”€â”€ Contestation: resolving â†’ waiting (round 2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Contestation: resolving → waiting (round 2) ───────────────────
 
   it("goes back to waiting on contestation", () => {
     protocol.startWork(WORK);
@@ -250,7 +250,7 @@ describe("CoordinationProtocol", () => {
     expect(thread?.respondedAgents).toEqual([]);
   });
 
-  // â”€â”€ Max rounds: 3 contestations â†’ auto-resolve â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Max rounds: 3 contestations → auto-resolve ────────────────────
 
   it("auto-resolves after max rounds", () => {
     protocol.startWork(WORK);
@@ -276,19 +276,19 @@ describe("CoordinationProtocol", () => {
       drainActions(protocol);
     }
 
-    // Round 1 â†’ contestation â†’ round 2
+    // Round 1 → contestation → round 2
     doRound();
     protocol.onContestation("t-6", "agent-2", "problem 1");
     drainActions(protocol);
     expect(protocol.getThreadState("t-6")?.round).toBe(2);
 
-    // Round 2 â†’ contestation â†’ round 3
+    // Round 2 → contestation → round 3
     doRound();
     protocol.onContestation("t-6", "agent-2", "problem 2");
     drainActions(protocol);
     expect(protocol.getThreadState("t-6")?.round).toBe(3);
 
-    // Round 3 â†’ contestation â†’ auto-resolve (max reached)
+    // Round 3 → contestation → auto-resolve (max reached)
     doRound();
     protocol.onContestation("t-6", "agent-2", "problem 3");
 
@@ -303,7 +303,7 @@ describe("CoordinationProtocol", () => {
     }
   });
 
-  // â”€â”€ Timeout while waiting for responses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Timeout while waiting for responses ───────────────────────────
 
   it("emits ask_llm_decide on response timeout", () => {
     protocol.startWork(WORK);
@@ -330,7 +330,7 @@ describe("CoordinationProtocol", () => {
     }
   });
 
-  // â”€â”€ Timeout while waiting for approvals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Timeout while waiting for approvals ───────────────────────────
 
   it("auto-resolves on approval timeout", () => {
     protocol.startWork(WORK);
@@ -367,7 +367,7 @@ describe("CoordinationProtocol", () => {
     }
   });
 
-  // â”€â”€ Duplicate messages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Duplicate messages ────────────────────────────────────────────
 
   it("ignores duplicate respondent but still records the message", () => {
     protocol.startWork(WORK);
@@ -386,7 +386,7 @@ describe("CoordinationProtocol", () => {
     const action1 = protocol.nextAction();
     expect(action1?.type).toBe("ask_llm_decide");
 
-    // Second message from same agent â€” respondent already tracked
+    // Second message from same agent — respondent already tracked
     protocol.onThreadMessage("t-9", "agent-2", "follow-up");
     // Still triggers another ask_llm_decide since all respondents are still complete
     const action2 = protocol.nextAction();
@@ -397,7 +397,7 @@ describe("CoordinationProtocol", () => {
     expect(thread?.respondedAgents).toEqual(["agent-2"]);
   });
 
-  // â”€â”€ Unknown thread â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Unknown thread ────────────────────────────────────────────────
 
   it("ignores events for unknown threads", () => {
     protocol.onThreadMessage("unknown", "agent-2", "hello");
@@ -409,13 +409,13 @@ describe("CoordinationProtocol", () => {
     expect(protocol.nextAction()).toBeNull();
   });
 
-  // â”€â”€ getThreadState â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── getThreadState ────────────────────────────────────────────────
 
   it("returns null for unknown thread", () => {
     expect(protocol.getThreadState("nonexistent")).toBeNull();
   });
 
-  // â”€â”€ Events in wrong phase are ignored â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Events in wrong phase are ignored ─────────────────────────────
 
   it("ignores onAnnounceResult when not in announcing phase", () => {
     // Still idle, not announcing
@@ -456,7 +456,7 @@ describe("CoordinationProtocol", () => {
     expect(protocol.nextAction()).toBeNull();
   });
 
-  // â”€â”€ Can do a second work cycle after the first resolves â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Can do a second work cycle after the first resolves ───────────
 
   it("supports sequential work cycles", () => {
     // First cycle: auto-resolve
@@ -474,7 +474,7 @@ describe("CoordinationProtocol", () => {
     protocol.onResolutionProposed("t-12");
     drainActions(protocol); // wait_approvals
 
-    // No respondents to approve â€” use timeout to auto-resolve
+    // No respondents to approve — use timeout to auto-resolve
     protocol.onTimeout("t-12");
     drainActions(protocol); // done
 

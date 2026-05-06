@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 import { buildProject, listTemplates } from "../../src/orchestrator/template-engine.js";
 import type { ProjectContext } from "../../src/orchestrator/types.js";
 

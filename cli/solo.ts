@@ -1,4 +1,4 @@
-﻿import { Command } from "commander";
+import { Command } from "commander";
 import { resolve } from "path";
 import { existsSync } from "fs";
 import { spawn } from "child_process";

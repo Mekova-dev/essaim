@@ -1,4 +1,4 @@
-﻿import mqtt from "mqtt";
+import mqtt from "mqtt";
 import { Duplex } from "stream";
 import { createLogger } from "../logger.js";
 const log = createLogger("mqtt-listener");
@@ -209,7 +209,7 @@ export function createMqttListener(options: MqttListenerOptions): MqttListener {
         const clientId = `agent-loop-${agentId}-${Date.now()}`;
 
         if (isBun && url.startsWith("ws")) {
-          // Bun: ws package Receiver is broken â€” use native WebSocket + Duplex bridge
+          // Bun: ws package Receiver is broken — use native WebSocket + Duplex bridge
           const stream = createBunWsStream(url);
           client = new mqtt.MqttClient(() => stream, { clientId, clean: true });
         } else {

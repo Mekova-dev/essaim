@@ -1,4 +1,4 @@
-﻿import fs from "fs";
+import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
 import type { ProjectContext } from "./types.js";

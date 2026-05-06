@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 import { EFFORT_PROFILES, EFFORT_ORDER, resolveEffort, parseSeverity, upgradeEffort, isThinkingLevel, thinkingKeyword, type EffortLevel, type ThinkingLevel } from "../../src/agent-loop/effort.js";
 
 describe("EFFORT_PROFILES", () => {
@@ -50,7 +50,7 @@ describe("isThinkingLevel", () => {
   it("rejects unknown values", () => {
     expect(isThinkingLevel("")).toBe(false);
     expect(isThinkingLevel("hard")).toBe(false);
-    expect(isThinkingLevel("think hard")).toBe(false);  // space variant â€” only hyphenated is canonical
+    expect(isThinkingLevel("think hard")).toBe(false);  // space variant — only hyphenated is canonical
     expect(isThinkingLevel(undefined)).toBe(false);
     expect(isThinkingLevel(42)).toBe(false);
   });
@@ -104,7 +104,7 @@ describe("resolveEffort", () => {
   });
 
   it("treats an unknown level as auto (safe fallback for misconfigured YAML)", () => {
-    // @ts-expect-error â€” intentionally passing a bad value to exercise the guard
+    // @ts-expect-error — intentionally passing a bad value to exercise the guard
     expect(resolveEffort("turbo", { toolsMode: "full", loop: true })).toBe("high");
     // @ts-expect-error
     expect(resolveEffort("wat", { toolsMode: "read_only", loop: false })).toBe("low");
@@ -113,7 +113,7 @@ describe("resolveEffort", () => {
 
 describe("parseSeverity", () => {
   it("extracts 'critical' from prefix", () => {
-    expect(parseSeverity("critical: server/src/foo.ts:123 â€” null check missing"))
+    expect(parseSeverity("critical: server/src/foo.ts:123 — null check missing"))
       .toBe("critical");
   });
 
@@ -131,7 +131,7 @@ describe("parseSeverity", () => {
   });
 
   it("returns undefined when no severity prefix", () => {
-    expect(parseSeverity("server/src/foo.ts:123 â€” null check")).toBeUndefined();
+    expect(parseSeverity("server/src/foo.ts:123 — null check")).toBeUndefined();
     expect(parseSeverity("")).toBeUndefined();
   });
 });
@@ -142,7 +142,7 @@ describe("upgradeEffort", () => {
   });
 
   it("leaves mid unchanged when severity is critical (no Opus jump)", () => {
-    // Previously we upgraded mid â†’ high; Opus tended to burn its budget
+    // Previously we upgraded mid → high; Opus tended to burn its budget
     // exploring instead of producing DONE on raid-style tasks.
     expect(upgradeEffort("mid", { severity: "critical" })).toBe("mid");
   });

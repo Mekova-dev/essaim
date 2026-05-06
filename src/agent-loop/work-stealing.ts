@@ -1,4 +1,4 @@
-﻿// client/agent-loop/work-stealing.ts
+// client/agent-loop/work-stealing.ts
 
 import { createLogger } from "../logger.js";
 const log = createLogger("work-stealing");
@@ -132,7 +132,7 @@ export async function claimNextTask(
     // Directed-dispatch: a thread with assigned_to set is only claimable by
     // that named agent. Skipping here avoids hitting claim-task just to get
     // a polite 'success: false, assigned_to: otherAgent'. For workers in a
-    // lead/worker preset this is the normal case â€” most threads target other
+    // lead/worker preset this is the normal case — most threads target other
     // workers.
     const assignedTo = (thread as Record<string, unknown>).assigned_to as string | null | undefined;
     if (assignedTo && assignedTo !== agentId) continue;
@@ -200,7 +200,7 @@ export async function unclaimTask(
   });
 }
 
-// â”€â”€ Review phase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Review phase ─────────────────────────────────────────────────────
 
 export type ReviewAction =
   | { type: "nouveau"; description: string }
@@ -274,7 +274,7 @@ export async function fetchExistingThreads(coordinatorUrl: string): Promise<stri
 }
 
 /**
- * Extract the file path from a review description like "server/src/foo.ts:123 â€” ..."
+ * Extract the file path from a review description like "server/src/foo.ts:123 — ..."
  */
 function extractFile(description: string): string {
   const match = description.match(/^(\S+\.\w+)(?::\d+)?/);
@@ -315,7 +315,7 @@ export async function processReviewActions(
       ? descriptions[0].slice(0, 200)
       : `${file}: ${descriptions.length} issue(s)`;
     const plan = descriptions.map((d, i) => `${i + 1}. ${d}`).join("\n");
-    log.debug(`NOUVEAU (grouped): ${subject} â€” ${descriptions.length} items`);
+    log.debug(`NOUVEAU (grouped): ${subject} — ${descriptions.length} items`);
     try {
       await coordinatorPost(`${coordinatorUrl}/api/announce`, {
         agent_id: agentId,

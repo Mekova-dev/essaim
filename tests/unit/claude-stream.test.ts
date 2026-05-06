@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EventEmitter, Readable } from "stream";
 import {
   buildArgs,
@@ -8,7 +8,7 @@ import {
   type StreamEvent,
 } from "../../src/agent-loop/claude-stream.js";
 
-// â”€â”€ buildArgs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── buildArgs ──────────────────────────────────────────────────────────
 
 describe("buildArgs", () => {
   it("returns base flags for minimal options", () => {
@@ -209,7 +209,7 @@ describe("buildArgs", () => {
       { thinking: "none" },
     );
     const pIdx = args.indexOf("-p");
-    // "none" means no keyword appended â€” prompt stays as-is (modulo newline sanitization)
+    // "none" means no keyword appended — prompt stays as-is (modulo newline sanitization)
     expect(args[pIdx + 1]).toBe("clean prompt");
   });
 
@@ -220,7 +220,7 @@ describe("buildArgs", () => {
   });
 });
 
-// â”€â”€ createStreamParser â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── createStreamParser ─────────────────────────────────────────────────
 
 describe("createStreamParser", () => {
   let emitter: EventEmitter;
@@ -281,7 +281,7 @@ describe("createStreamParser", () => {
   });
 });
 
-// â”€â”€ createClaudeStream (spawn-per-turn model) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── createClaudeStream (spawn-per-turn model) ────────────────────────
 
 // Mock spawn to simulate claude -p behavior
 function makeMockChild() {
@@ -365,7 +365,7 @@ describe("createClaudeStream (spawn-per-turn)", () => {
     child1.emit("close", 0);
     await p1;
 
-    // Turn 2 â€” should spawn a NEW process
+    // Turn 2 — should spawn a NEW process
     const p2 = client.send("Turn 2");
     expect(mockChildren).toHaveLength(2);
 

@@ -1,4 +1,4 @@
-﻿import path from "path";
+import path from "path";
 import fs, { readFileSync } from "fs";
 import { execSync, ChildProcess } from "child_process";
 import { fileURLToPath } from "url";
@@ -104,9 +104,9 @@ async function _runProjectBody(
 
   log.info(`=== ${project.name} (${mode}, ${project.agents.length} agents) ===`);
 
-  // 0. Pre-flight quota check â€” abort the raid before we commit to worktrees
+  // 0. Pre-flight quota check — abort the raid before we commit to worktrees
   // if the Anthropic quota is already above the configured max. Fail-open if
-  // the coordinator is unreachable or the platform has no credential reader â€”
+  // the coordinator is unreachable or the platform has no credential reader —
   // we log the reason but proceed, matching the project-wide "guardrail not
   // gate" decision.
   const maxQuotaPct = resolveMaxUtilizationPct(runOpts.maxQuotaPct, process.env.MAX_QUOTA_PCT);
@@ -180,7 +180,7 @@ async function _runProjectBody(
     duringRunProcess = spawn("bash", [duringScript], { cwd: runDir, stdio: "ignore" });
   }
 
-  // Timeout â€” works for both legacy (kill ChildProcess) and agent-loop
+  // Timeout — works for both legacy (kill ChildProcess) and agent-loop
   // (abort signal + SIGKILL propagation into claude children via claude-stream).
   // Previously the agent-loop subprocess hierarchy survived "Killing all agents"
   // because the orchestrator never tracked the nested claude children, leading
@@ -232,14 +232,14 @@ async function _runProjectBody(
     }
 
     const identityBlock = [
-      `## IDENTITÃ‰ (OBLIGATOIRE)`,
+      `## IDENTITÉ (OBLIGATOIRE)`,
       `Tu es "${agent.name}". Ton agent_id est "${agent.id}".`,
-      `Tu es DÃ‰JÃ€ enregistrÃ© au coordinator. N'appelle PAS register_agent.`,
+      `Tu es DÉJÀ enregistré au coordinator. N'appelle PAS register_agent.`,
       `Pour TOUS tes appels au coordinator (announce_work, post_to_thread, etc.), utilise agent_id="${agent.id}".`,
     ].join("\n");
 
     const coordinatorPrompt = isCoordinated
-      ? `${identityBlock}\nTu es connectÃ© au coordinateur. Appelle announce_work avec agent_id="${agent.id}" avant de travailler.`
+      ? `${identityBlock}\nTu es connecté au coordinateur. Appelle announce_work avec agent_id="${agent.id}" avant de travailler.`
       : undefined;
 
     log.info(`Launching ${agent.name} (${agent.profile})${useAgentLoop ? " [agent-loop]" : ""}...`);

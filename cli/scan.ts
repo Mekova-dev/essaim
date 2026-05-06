@@ -1,4 +1,4 @@
-﻿import { Command } from "commander";
+import { Command } from "commander";
 import { resolve } from "path";
 import { scanProject } from "../src/orchestrator/scanner.js";
 

@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { parseDiscoveries, postDiscoveries, claimNextTask, completeTask, parseReviewActions } from "../../src/agent-loop/work-stealing.js";
 
 describe("parseDiscoveries", () => {
@@ -59,7 +59,7 @@ describe("postDiscoveries", () => {
   });
 });
 
-// â”€â”€ claimNextTask â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── claimNextTask ─────────────────────────────────────────────────────
 
 describe("claimNextTask", () => {
   afterEach(() => {
@@ -152,7 +152,7 @@ describe("claimNextTask", () => {
     expect(claimedBodies[0].thread_id).toBe("t-2");
   });
 
-  it("handles race condition â€” claim fails, tries next", async () => {
+  it("handles race condition — claim fails, tries next", async () => {
     let claimCallCount = 0;
     const mockFetch = vi.fn().mockImplementation(async (url: string) => {
       if (url.includes("/api/threads-active")) {
@@ -297,7 +297,7 @@ describe("claimNextTask", () => {
   });
 });
 
-// â”€â”€ completeTask â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── completeTask ──────────────────────────────────────────────────────
 
 describe("completeTask", () => {
   afterEach(() => {
@@ -327,7 +327,7 @@ describe("completeTask", () => {
     const mockFetch = vi.fn().mockRejectedValue(new Error("ECONNREFUSED"));
     vi.stubGlobal("fetch", mockFetch);
 
-    // Should not throw â€” completeTask catches errors
+    // Should not throw — completeTask catches errors
     await expect(completeTask("http://localhost:3100", "t-42", "agent-1", "Done")).resolves.toBeUndefined();
   });
 
@@ -343,7 +343,7 @@ describe("completeTask", () => {
   });
 });
 
-// â”€â”€ parseReviewActions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── parseReviewActions ───────────────────────────────────────────────
 
 describe("parseReviewActions", () => {
   it("parses NOUVEAU action", () => {
@@ -361,10 +361,10 @@ describe("parseReviewActions", () => {
   });
 
   it("parses ENRICHIT action", () => {
-    const output = "REVIEW:\nENRICHIT | thread-def-456 | Le mÃªme bug se manifeste aussi quand le header est vide";
+    const output = "REVIEW:\nENRICHIT | thread-def-456 | Le même bug se manifeste aussi quand le header est vide";
     const actions = parseReviewActions(output);
     expect(actions).toHaveLength(1);
-    expect(actions[0]).toEqual({ type: "enrichit", threadId: "thread-def-456", context: "Le mÃªme bug se manifeste aussi quand le header est vide" });
+    expect(actions[0]).toEqual({ type: "enrichit", threadId: "thread-def-456", context: "Le même bug se manifeste aussi quand le header est vide" });
   });
 
   it("parses mixed actions", () => {

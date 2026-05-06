@@ -1,4 +1,4 @@
-﻿import { Command } from "commander";
+import { Command } from "commander";
 import { listTemplates } from "../src/orchestrator/template-engine.js";
 
 export function createListCommand(): Command {

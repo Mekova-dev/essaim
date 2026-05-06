@@ -1,4 +1,4 @@
-﻿// tests/unit/bce-parity.test.ts
+// tests/unit/bce-parity.test.ts
 import { describe, it, expect } from 'vitest';
 import { resolve } from 'path';
 import { runPipeline } from '@swoofer/promptweave';
@@ -57,7 +57,7 @@ describe('Parity: BCE presets produce complete prompts', () => {
       const result = buildPreset('gardien');
       expect(result.output.prompt).toContain('Structure');
       expect(result.output.prompt).toContain('Conventions');
-      expect(result.output.prompt).toContain('ComplexitÃ©');
+      expect(result.output.prompt).toContain('Complexité');
       expect(result.output.prompt).toContain('Dette technique');
       expect(result.output.prompt).toContain('Tests');
       expect(result.output.prompt).toContain('Documentation');
@@ -78,8 +78,8 @@ describe('Parity: BCE presets produce complete prompts', () => {
   describe('Chaine', () => {
     it('implement preset has implementation instructions', () => {
       const result = buildPreset('chaine-implement');
-      expect(result.output.prompt).toContain('ImplÃ©menteur');
-      expect(result.output.prompt).toContain('amÃ©lioration');
+      expect(result.output.prompt).toContain('Implémenteur');
+      expect(result.output.prompt).toContain('amélioration');
     });
 
     it('review preset has review instructions + read-only', () => {
@@ -109,13 +109,13 @@ describe('Parity: BCE presets produce complete prompts', () => {
     it('runner 2 has architecture focus + waits for predecessor', () => {
       const result = buildPreset('relais-2');
       expect(result.output.prompt).toContain('architecturale');
-      expect(result.output.prompt).toContain('SÃ©quencement');
+      expect(result.output.prompt).toContain('Séquencement');
     });
 
     it('runner 3 has finalization focus + waits for predecessor', () => {
       const result = buildPreset('relais-3');
       expect(result.output.prompt).toContain('Finition');
-      expect(result.output.prompt).toContain('SÃ©quencement');
+      expect(result.output.prompt).toContain('Séquencement');
     });
   });
 
@@ -123,7 +123,7 @@ describe('Parity: BCE presets produce complete prompts', () => {
     it('author preset has improvement instructions', () => {
       const result = buildPreset('revue-author');
       expect(result.output.prompt).toContain('Auteur');
-      expect(result.output.prompt).toContain('amÃ©liore');
+      expect(result.output.prompt).toContain('améliore');
     });
 
     it('reviewer preset has review instructions', () => {
@@ -150,7 +150,7 @@ describe('Parity: BCE presets produce complete prompts', () => {
   describe('Debat', () => {
     it('contains debate instructions', () => {
       const result = buildPreset('debat');
-      expect(result.output.prompt).toContain('DÃ©bat');
+      expect(result.output.prompt).toContain('Débat');
       expect(result.output.prompt).toContain('position');
       expect(result.output.prompt).toContain('consensus');
     });
@@ -165,8 +165,8 @@ describe('Parity: BCE presets produce complete prompts', () => {
 
     it('reviewer has review instructions', () => {
       const result = buildPreset('babel-reviewer');
-      expect(result.output.prompt).toContain('RÃ©vis');
-      expect(result.output.prompt).toContain('FidÃ©litÃ©');
+      expect(result.output.prompt).toContain('Révis');
+      expect(result.output.prompt).toContain('Fidélité');
     });
   });
 
@@ -179,14 +179,14 @@ describe('Parity: BCE presets produce complete prompts', () => {
 
     it('player has competition instructions', () => {
       const result = buildPreset('arene-player');
-      expect(result.output.prompt).toContain('compÃ©tition');
+      expect(result.output.prompt).toContain('compétition');
     });
   });
 
   describe('Carrefour', () => {
     it('contains conflict test instructions', () => {
       const result = buildPreset('carrefour');
-      expect(result.output.prompt).toContain('MÃŠMES fichiers');
+      expect(result.output.prompt).toContain('MÊMES fichiers');
       expect(result.output.prompt).toContain('conflit');
     });
   });

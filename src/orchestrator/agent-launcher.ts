@@ -1,4 +1,4 @@
-﻿// src/agent-launcher.ts
+// src/agent-launcher.ts
 import { spawn, ChildProcess } from "child_process";
 import type { AgentConfig } from "./types.js";
 import { runAgentLoop, type AgentLoopConfig, type AgentLoopResult } from "../agent-loop/agent-loop.js";
@@ -83,14 +83,14 @@ export function launchAgent(
   });
 }
 
-// â”€â”€ Agent Loop mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Agent Loop mode ───────────────────────────────────────────────────
 // Replaces claude -p one-shot with a programmatic agent loop that
 // guarantees coordination protocol execution via code, receives MQTT
 // messages in real-time, and uses the LLM only for decisions.
 
 /**
  * Derive the MQTT WebSocket URL from the coordinator HTTP URL.
- * http://localhost:3100 â†’ ws://localhost:3100/mqtt
+ * http://localhost:3100 → ws://localhost:3100/mqtt
  */
 function mqttWsUrl(coordinatorUrl: string): string {
   const u = new URL(coordinatorUrl);
@@ -163,9 +163,9 @@ export async function launchAgentLoop(
     phases: agent.phases,
     maxTurns: 50,
     // Re-run discover/review up to 3 times if the work pool empties while the
-    // agent still has turn budget â€” helps raids keep finding new issues.
+    // agent still has turn budget — helps raids keep finding new issues.
     maxDiscoverCycles: 3,
-    // Bound cache-write growth â€” each execute task gets a fresh session
+    // Bound cache-write growth — each execute task gets a fresh session
     // instead of accumulating every prior file read in one giant --resume.
     // Cost: each task re-caches the system prompt (Anthropic deduplicates it
     // via the prompt cache, so cheap in practice).

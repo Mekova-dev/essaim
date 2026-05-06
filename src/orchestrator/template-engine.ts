@@ -1,4 +1,4 @@
-﻿// client/orchestrator/template-engine.ts
+// client/orchestrator/template-engine.ts
 // Prompt generation via Behavior Composition Engine (BCE).
 import type { MiniProject, ProjectContext } from "./types.js";
 import { buildProjectFromBce, listBceTemplates } from "../bridge.js";

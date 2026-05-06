@@ -1,4 +1,4 @@
-﻿import { execSync } from "child_process";
+import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import type { RunResult, AgentResult, WorkspaceResult } from "./types.js";
@@ -40,8 +40,8 @@ export function writeReport(results: RunResult[], outputDir: string): string {
 
   for (const r of results) {
     md += `## ${r.project_name} (${r.mode})\n\n`;
-    md += `| MÃ©trique | Valeur |\n|----------|--------|\n`;
-    md += `| DurÃ©e | ${(r.duration_ms / 1000).toFixed(1)}s |\n`;
+    md += `| Métrique | Valeur |\n|----------|--------|\n`;
+    md += `| Durée | ${(r.duration_ms / 1000).toFixed(1)}s |\n`;
     md += `| Agents | ${r.coordinator_metrics.agents_count} |\n`;
     md += `| Threads ouverts | ${r.coordinator_metrics.threads_opened} |\n`;
     md += `| Consensus | ${r.coordinator_metrics.threads_resolved_consensus} |\n`;
@@ -58,7 +58,7 @@ export function writeReport(results: RunResult[], outputDir: string): string {
     }
 
     if (Object.keys(r.custom_metrics).length > 0) {
-      md += `\n### MÃ©triques spÃ©cifiques\n\n`;
+      md += `\n### Métriques spécifiques\n\n`;
       for (const [key, value] of Object.entries(r.custom_metrics)) {
         md += `- ${key}: ${JSON.stringify(value)}\n`;
       }
@@ -74,7 +74,7 @@ export function writeReport(results: RunResult[], outputDir: string): string {
     // Token + cost breakdown (populated from agent-loop runs)
     const agentsWithTokens = r.agent_results.filter((a) => a.tokens);
     if (agentsWithTokens.length > 0) {
-      md += `\n### CoÃ»t par agent\n\n`;
+      md += `\n### Coût par agent\n\n`;
       md += `| Agent | Turns | Cost | Input | Output | Cache read | Cache write | Cache hit |\n`;
       md += `|-------|-------|------|-------|--------|------------|-------------|-----------|\n`;
       let sumCost = 0, sumIn = 0, sumOut = 0, sumCacheR = 0, sumCacheW = 0;
@@ -105,7 +105,7 @@ export function writeReport(results: RunResult[], outputDir: string): string {
         }
       }
       if (Object.keys(phaseTotals).length > 0) {
-        md += `\n**CoÃ»t par phase** (agents agrÃ©gÃ©s):\n\n`;
+        md += `\n**Coût par phase** (agents agrégés):\n\n`;
         md += `| Phase | Cost | % |\n|-------|------|---|\n`;
         const sortedPhases = Object.entries(phaseTotals).sort(([, a], [, b]) => b - a);
         for (const [phase, cost] of sortedPhases) {
@@ -114,8 +114,8 @@ export function writeReport(results: RunResult[], outputDir: string): string {
         }
       }
       if (Object.keys(modelTotals).length > 0) {
-        md += `\n**CoÃ»t par modÃ¨le** (agents agrÃ©gÃ©s):\n\n`;
-        md += `| ModÃ¨le | Cost | % |\n|--------|------|---|\n`;
+        md += `\n**Coût par modèle** (agents agrégés):\n\n`;
+        md += `| Modèle | Cost | % |\n|--------|------|---|\n`;
         const sortedModels = Object.entries(modelTotals).sort(([, a], [, b]) => b - a);
         for (const [model, cost] of sortedModels) {
           const pct = sumCost > 0 ? ((cost / sumCost) * 100).toFixed(1) : "0.0";

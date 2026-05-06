@@ -1,4 +1,4 @@
-﻿import { spawn, type ChildProcess } from "child_process";
+import { spawn, type ChildProcess } from "child_process";
 import { randomUUID } from "crypto";
 import { existsSync } from "fs";
 import { EventEmitter } from "events";
@@ -6,7 +6,7 @@ import { createLogger } from "../logger.js";
 import { thinkingKeyword, type ThinkingLevel } from "./effort.js";
 const log = createLogger("claude-stream");
 
-// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Types ──────────────────────────────────────────────────────────────
 
 export interface ClaudeStreamOptions {
   workspacePath: string;
@@ -62,12 +62,12 @@ export interface SendOptions {
   model?: string;
   thinking?: ThinkingLevel;
   allowedTools?: string[];
-  // Explicit block list â€” bypasses the pre-approval loophole where
+  // Explicit block list — bypasses the pre-approval loophole where
   // --dangerously-skip-permissions effectively grants every tool regardless
   // of what --allowedTools contains. Use this to strictly forbid tool names
   // for restricted phases (e.g. review phase = no Read/Bash/Edit).
   disallowedTools?: string[];
-  // Start a fresh session for this send â€” don't resume the previous turn's
+  // Start a fresh session for this send — don't resume the previous turn's
   // context. Useful when switching models (Haiku can't reuse Sonnet's cache)
   // or when the previous context is pure clutter (review phase doesn't need
   // discover's file reads). Reduces cache-write waste significantly.
@@ -88,7 +88,7 @@ export class BudgetExceededError extends Error {
   }
 }
 
-// â”€â”€ Stream event types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Stream event types ─────────────────────────────────────────────────
 
 export type StreamEvent =
   | { type: "system"; subtype: "init"; session_id?: string; [k: string]: unknown }
@@ -140,7 +140,7 @@ function summarizeToolInput(name: string, input: Record<string, unknown>): strin
   }
 }
 
-// â”€â”€ Build CLI args â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Build CLI args ─────────────────────────────────────────────────────
 
 export function buildArgs(opts: ClaudeStreamOptions, prompt: string, resume: boolean, sendOpts?: SendOptions): string[] {
   // Extended-thinking trigger keyword (Claude CLI-specific: the keyword must appear in the user prompt).
@@ -148,7 +148,7 @@ export function buildArgs(opts: ClaudeStreamOptions, prompt: string, resume: boo
   const thinking = sendOpts?.thinking;
   const kw = thinking ? thinkingKeyword(thinking) : "";
   const promptWithThinking = kw ? `${prompt}\n\n${kw}` : prompt;
-  // Newlines in -p value break Bun's arg parser â€” flatten to single line
+  // Newlines in -p value break Bun's arg parser — flatten to single line
   const sanitizedPrompt = promptWithThinking.replace(/\n+/g, " \\n ");
   const args = [
     "-p", sanitizedPrompt,
@@ -179,7 +179,7 @@ export function buildArgs(opts: ClaudeStreamOptions, prompt: string, resume: boo
   return args;
 }
 
-// â”€â”€ NDJSON parser â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── NDJSON parser ──────────────────────────────────────────────────────
 
 export function createStreamParser(emitter: EventEmitter, readable: NodeJS.ReadableStream): void {
   let buffer = "";
@@ -196,7 +196,7 @@ export function createStreamParser(emitter: EventEmitter, readable: NodeJS.Reada
         const event = JSON.parse(trimmed) as StreamEvent;
         emitter.emit("event", event);
       } catch {
-        // Non-JSON line â€” ignore
+        // Non-JSON line — ignore
       }
     }
   });
@@ -213,7 +213,7 @@ export function createStreamParser(emitter: EventEmitter, readable: NodeJS.Reada
   });
 }
 
-// â”€â”€ Resolve claude binary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Resolve claude binary ─────────────────────────────────────────────
 
 function resolveClaudeBin(): string {
   const envPath = process.env.CLAUDE_BIN;
@@ -229,7 +229,7 @@ function resolveClaudeBin(): string {
   return "claude";
 }
 
-// â”€â”€ Run one turn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Run one turn ──────────────────────────────────────────────────────
 
 /**
  * Spawn claude -p for a single turn. Each turn is a separate process.
@@ -260,7 +260,7 @@ function runOneTurn(
     });
     log.info(`spawned claude (pid=${child.pid}, resume=${resume})`);
     onSpawn?.(child);
-    // Close stdin immediately â€” -p provides the prompt via args
+    // Close stdin immediately — -p provides the prompt via args
     child.stdin!.end();
 
     const emitter = new EventEmitter();
@@ -329,7 +329,7 @@ function runOneTurn(
           cacheCreationTokens: (usageRaw.cache_creation_input_tokens as number) ?? 0,
         };
         if (subtype !== "success") {
-          log.warn(`result with non-success subtype: ${subtype ?? "?"} â€” resolving with partial content`);
+          log.warn(`result with non-success subtype: ${subtype ?? "?"} — resolving with partial content`);
         } else {
           log.info("turn complete", { durationMs: (eventRec.duration_ms as number) ?? 0, toolCalls: toolCalls.length, contentLength: content.length, rateLimited: isRateLimited, tokens });
         }
@@ -365,7 +365,7 @@ function runOneTurn(
   });
 }
 
-// â”€â”€ Main factory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main factory ───────────────────────────────────────────────────────
 
 /**
  * Create a claude stream client that spawns one process per turn.
@@ -382,7 +382,7 @@ export function createClaudeStream(options: ClaudeStreamOptions): ClaudeStreamCl
   const killCurrent = (reason: string): void => {
     const child = currentChild;
     if (!child || child.killed || child.exitCode !== null) return;
-    log.warn(`SIGKILL claude child pid=${child.pid} â€” ${reason}`);
+    log.warn(`SIGKILL claude child pid=${child.pid} — ${reason}`);
     try { child.kill("SIGKILL"); } catch { /* already gone */ }
   };
 
@@ -404,7 +404,7 @@ export function createClaudeStream(options: ClaudeStreamOptions): ClaudeStreamCl
   const onSpawn = (child: ChildProcess): void => {
     currentChild = child;
     // If the signal was already fired between send() entry and spawn completion,
-    // kill the child immediately â€” otherwise the abort handler already covered it.
+    // kill the child immediately — otherwise the abort handler already covered it.
     if (options.abortSignal?.aborted) killCurrent("abort signal already aborted at spawn");
   };
 

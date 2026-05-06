@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 import { buildProjectFromBce, buildSoloPrompt } from "../../src/bridge.js";
 
 const mockContext = {
@@ -36,7 +36,7 @@ describe("buildProjectFromBce --agents", () => {
 
 describe("buildProjectFromBce --set", () => {
   it("passes setParams to pipeline", () => {
-    // This should not throw â€” setParams are merged into launchParams
+    // This should not throw — setParams are merged into launchParams
     const project = buildProjectFromBce("gardien", mockContext, {
       setParams: { "project-context": { language: "python" } },
     });

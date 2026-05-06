@@ -1,4 +1,4 @@
-﻿// bce/engine/bridge.ts
+// bce/engine/bridge.ts
 import { resolve } from 'path';
 import { runPipeline } from '@swoofer/promptweave';
 import type { PipelineResult } from '@swoofer/promptweave';
@@ -18,7 +18,7 @@ interface BceMiniProject {
     role?: string;
     read_only?: boolean;
     launch_delay?: number;
-    // BCE-assembled outputs â€” consumed by orchestrator to write .claude/ files
+    // BCE-assembled outputs — consumed by orchestrator to write .claude/ files
     hooks: Record<string, string>;
     envVars: Record<string, string>;
     mcpTools: string[];

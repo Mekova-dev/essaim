@@ -1,4 +1,4 @@
-﻿import { execSync } from "child_process";
+import { execSync } from "child_process";
 import type { CoordinatorMetrics } from "./types.js";
 
 export interface SseEvent {

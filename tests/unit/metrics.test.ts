@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 import { parseSseEvents, computeMetrics } from "../../src/orchestrator/metrics.js";
 
 describe("parseSseEvents", () => {
