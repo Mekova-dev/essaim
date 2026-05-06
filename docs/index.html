@@ -1446,42 +1446,42 @@
         </thead>
         <tbody>
           <tr>
-            <td><code style="color: var(--blue); font-size: 0.85em;">coordinator/consultations/new</code></td>
+            <td><code style="color: var(--blue); font-size: 0.85em;\">coordinator/consultations/new</code></td>
             <td data-i18n="mqtt.row1.emit">A thread is opened</td>
             <td data-i18n="mqtt.row1.pay"><code style="font-size:0.8em">thread_id, subject, initiator_id, target_files</code></td>
           </tr>
           <tr>
-            <td><code style="color: var(--blue); font-size: 0.85em;">.../consultations/+/messages</code></td>
+            <td><code style="color: var(--blue); font-size: 0.85em;\">.../consultations/+/messages</code></td>
             <td data-i18n="mqtt.row2.emit">Someone posts to a thread</td>
             <td data-i18n="mqtt.row2.pay"><code style="font-size:0.8em">agent_id, name, content, type</code></td>
           </tr>
           <tr>
-            <td><code style="color: var(--blue); font-size: 0.85em;">.../consultations/+/status</code></td>
+            <td><code style="color: var(--blue); font-size: 0.85em;\">.../consultations/+/status</code></td>
             <td data-i18n="mqtt.row3.emit">Thread transitions state</td>
             <td data-i18n="mqtt.row3.pay"><code style="font-size:0.8em">status: open/resolving/resolved/timeout</code></td>
           </tr>
           <tr>
-            <td><code style="color: var(--blue); font-size: 0.85em;">.../consultations/+/claimed</code></td>
+            <td><code style="color: var(--blue); font-size: 0.85em;\">.../consultations/+/claimed</code></td>
             <td data-i18n="mqtt.row4.emit">Work-stealing claim (atomic)</td>
             <td data-i18n="mqtt.row4.pay"><code style="font-size:0.8em">claimed_by, thread_id</code></td>
           </tr>
           <tr>
-            <td><code style="color: var(--blue); font-size: 0.85em;">.../consultations/+/completed</code></td>
+            <td><code style="color: var(--blue); font-size: 0.85em;\">.../consultations/+/completed</code></td>
             <td data-i18n="mqtt.row5.emit">Claimed task finishes</td>
             <td data-i18n="mqtt.row5.pay"><code style="font-size:0.8em">agent_id, thread_id, resolution</code></td>
           </tr>
           <tr>
-            <td><code style="color: var(--blue); font-size: 0.85em;">coordinator/agents/+/status</code></td>
+            <td><code style="color: var(--blue); font-size: 0.85em;\">coordinator/agents/+/status</code></td>
             <td data-i18n="mqtt.row6.emit">Agent online / offline</td>
             <td data-i18n="mqtt.row6.pay"><code style="font-size:0.8em">status, name, modules</code></td>
           </tr>
           <tr>
-            <td><code style="color: var(--blue); font-size: 0.85em;">coordinator/broadcast</code></td>
+            <td><code style="color: var(--blue); font-size: 0.85em;\">coordinator/broadcast</code></td>
             <td data-i18n="mqtt.row7.emit">System-wide announcement</td>
             <td data-i18n="mqtt.row7.pay"><code style="font-size:0.8em">arbitrary JSON</code></td>
           </tr>
           <tr>
-            <td><code style="color: var(--blue); font-size: 0.85em;">coordinator/quota/update</code></td>
+            <td><code style="color: var(--blue); font-size: 0.85em;\">coordinator/quota/update</code></td>
             <td data-i18n="mqtt.row8.emit">Anthropic quota refresh</td>
             <td data-i18n="mqtt.row8.pay"><code style="font-size:0.8em">usage, limit, utilization_pct</code></td>
           </tr>
@@ -1583,15 +1583,15 @@
     <div class="cards fade-in">
       <div class="card">
         <h3 style="font-size: 1.05rem;" data-i18n="bce.rule1.title">announce-readonly-adaptation</h3>
-        <p data-i18n="bce.rule1.desc">When <code style="color: var(--accent); font-size: 0.85em;">announce-before-write</code> meets <code style="color: var(--accent); font-size: 0.85em;">read-only-mode</code>, section 020 is rewritten as <em>"before your analysis"</em> instead of <em>"before modifying"</em>.</p>
+        <p data-i18n="bce.rule1.desc">When <code style="color: var(--accent); font-size: 0.85em;\">announce-before-write</code> meets <code style="color: var(--accent); font-size: 0.85em;\">read-only-mode</code>, section 020 is rewritten as <em>"before your analysis"</em> instead of <em>"before modifying"</em>.</p>
       </div>
       <div class="card">
         <h3 style="font-size: 1.05rem;" data-i18n="bce.rule2.title">sequential-then-announce</h3>
-        <p data-i18n="bce.rule2.desc">When <code style="color: var(--accent); font-size: 0.85em;">sequential-wait</code> meets <code style="color: var(--accent); font-size: 0.85em;">announce-before-write</code>, section 012 is injected: <em>"wait for predecessor &rarr; announce &rarr; code"</em>.</p>
+        <p data-i18n="bce.rule2.desc">When <code style="color: var(--accent); font-size: 0.85em;\">sequential-wait</code> meets <code style="color: var(--accent); font-size: 0.85em;\">announce-before-write</code>, section 012 is injected: <em>"wait for predecessor &rarr; announce &rarr; code"</em>.</p>
       </div>
       <div class="card">
         <h3 style="font-size: 1.05rem;" data-i18n="bce.rule3.title">solo-mode-strip</h3>
-        <p data-i18n="bce.rule3.desc">When <code style="color: var(--accent); font-size: 0.85em;">coordinator-rules.solo_mode = true</code>, the engine strips announce + conflict-resolution entirely and overrides context with <em>"you work alone"</em>.</p>
+        <p data-i18n="bce.rule3.desc">When <code style="color: var(--accent); font-size: 0.85em;\">coordinator-rules.solo_mode = true</code>, the engine strips announce + conflict-resolution entirely and overrides context with <em>"you work alone"</em>.</p>
       </div>
     </div>
 
@@ -1781,7 +1781,7 @@
       <div class="comm-card">
         <div class="comm-tag">Interactive</div>
         <h3 data-i18n="comm.interactive.title">Claude Code sessions</h3>
-        <p data-i18n="comm.interactive.desc">Each developer runs <code style="color:var(--accent);font-size:0.85em;">claude</code> normally. Session hooks auto-register the agent, attach the agent-loop's MQTT listener, and track file edits. Coordination is transparent.</p>
+        <p data-i18n="comm.interactive.desc">Each developer runs <code style="color:var(--accent);font-size:0.85em;\">claude</code> normally. Session hooks auto-register the agent, attach the agent-loop's MQTT listener, and track file edits. Coordination is transparent.</p>
         <div class="flow-diagram">
           <div class="flow-step"><strong data-i18n="comm.flow.start">Developer starts claude</strong></div>
           <div class="flow-arrow">&darr;</div>
@@ -1814,7 +1814,7 @@
       <div class="comm-card">
         <div class="comm-tag tag-auto">Orchestrated</div>
         <h3 data-i18n="comm.automated.title">Work-stealing templates</h3>
-        <p data-i18n="comm.automated.desc"><code style="color:var(--accent);font-size:0.85em;">essaim run &lt;template&gt;</code> launches N agent-loops in parallel worktrees. Each runs the phased protocol: discover in read-only, dedup via review, then atomically claim tasks from the shared pool until drained.</p>
+        <p data-i18n="comm.automated.desc"><code style="color:var(--accent);font-size:0.85em;\">essaim run &lt;template&gt;</code> launches N agent-loops in parallel worktrees. Each runs the phased protocol: discover in read-only, dedup via review, then atomically claim tasks from the shared pool until drained.</p>
         <div class="flow-diagram">
           <div class="flow-step"><strong data-i18n="comm.flow.script">run raid -p . --agents 3</strong></div>
           <div class="flow-arrow">&darr;</div>
@@ -1905,7 +1905,7 @@
       <div class="install-card">
         <div class="install-step" data-i18n="install.step2.label">Step 2</div>
         <h3 data-i18n="install.step2.title">Initialize your project</h3>
-        <p style="color:var(--muted); font-size:0.88rem;" data-i18n="install.step2.desc">Writes BCE-assembled hooks + <code style="color:var(--accent);font-size:0.85em;">.mcp.json</code> into your project. Picks up the coordinator URL + your identity.</p>
+        <p style="color:var(--muted); font-size:0.88rem;" data-i18n="install.step2.desc">Writes BCE-assembled hooks + <code style="color:var(--accent);font-size:0.85em;\">.mcp.json</code> into your project. Picks up the coordinator URL + your identity.</p>
         <div class="code-block">essaim init ~/project \<br/>  --url http://localhost:3100 \<br/>  --name "Alice" \<br/>  --preset bug-hunt</div>
       </div>
       <div class="install-card">
@@ -2673,7 +2673,7 @@
       "comm.interactive.title": "Claude Code sessions",
       "comm.interactive.desc": "Each developer runs <code style=\"color:var(--accent);font-size:0.85em;\">claude</code> normally. Session hooks auto-register the agent, attach the agent-loop's MQTT listener, and track file edits. Coordination is transparent.",
       "comm.automated.title": "Work-stealing templates",
-      "comm.automated.desc": "<code style=\"color:var(--accent);font-size:0.85em;">essaim run &lt;template&gt;</code> launches N agent-loops in parallel worktrees. Each runs the phased protocol: discover in read-only, dedup via review, then atomically claim tasks from the shared pool until drained.",
+      "comm.automated.desc": "<code style=\"color:var(--accent);font-size:0.85em;\">essaim run &lt;template&gt;</code> launches N agent-loops in parallel worktrees. Each runs the phased protocol: discover in read-only, dedup via review, then atomically claim tasks from the shared pool until drained.",
       "comm.flow.start": "Developer starts claude",
       "comm.flow.hook.start": "session-start hook fires",
       "comm.flow.register": "Register + subscribe MQTT",
@@ -2900,7 +2900,7 @@
       "comm.interactive.title": "Sessions Claude Code",
       "comm.interactive.desc": "Chaque d&eacute;veloppeur lance <code style=\"color:var(--accent);font-size:0.85em;\">claude</code> normalement. Les hooks de session inscrivent l'agent, attachent le listener MQTT de l'agent-loop et suivent les &eacute;ditions de fichiers. Coordination transparente.",
       "comm.automated.title": "Templates work-stealing",
-      "comm.automated.desc": "<code style=\"color:var(--accent);font-size:0.85em;">essaim run &lt;template&gt;</code> lance N agent-loops en parall&egrave;le dans des worktrees. Chacun ex&eacute;cute le protocole phas&eacute; : discover en read-only, dedup via review, puis claim atomique des t&acirc;ches du pool jusqu'&agrave; &eacute;puisement.",
+      "comm.automated.desc": "<code style=\"color:var(--accent);font-size:0.85em;\">essaim run &lt;template&gt;</code> lance N agent-loops en parall&egrave;le dans des worktrees. Chacun ex&eacute;cute le protocole phas&eacute; : discover en read-only, dedup via review, puis claim atomique des t&acirc;ches du pool jusqu'&agrave; &eacute;puisement.",
       "comm.flow.start": "Le d&eacute;veloppeur lance claude",
       "comm.flow.hook.start": "Le hook session-start se d&eacute;clenche",
       "comm.flow.register": "Inscription + abonnement MQTT",
@@ -3127,7 +3127,7 @@
       "comm.interactive.title": "Sesiones Claude Code",
       "comm.interactive.desc": "Cada desarrollador corre <code style=\"color:var(--accent);font-size:0.85em;\">claude</code> normalmente. Los hooks de sesi&oacute;n registran el agente, adjuntan el listener MQTT del agent-loop y rastrean ediciones. Coordinaci&oacute;n transparente.",
       "comm.automated.title": "Plantillas work-stealing",
-      "comm.automated.desc": "<code style=\"color:var(--accent);font-size:0.85em;">essaim run &lt;template&gt;</code> lanza N agent-loops en paralelo en worktrees. Cada uno corre el protocolo fasificado: discover en read-only, dedup v&iacute;a review, y luego reclaman at&oacute;micamente tareas del pool.",
+      "comm.automated.desc": "<code style=\"color:var(--accent);font-size:0.85em;\">essaim run &lt;template&gt;</code> lanza N agent-loops en paralelo en worktrees. Cada uno corre el protocolo fasificado: discover en read-only, dedup v&iacute;a review, y luego reclaman at&oacute;micamente tareas del pool.",
       "comm.flow.start": "El desarrollador inicia claude",
       "comm.flow.hook.start": "Se dispara el hook session-start",
       "comm.flow.register": "Registro + suscripci&oacute;n MQTT",
@@ -3354,7 +3354,7 @@
       "comm.interactive.title": "Claude-Code-Sessions",
       "comm.interactive.desc": "Jeder Entwickler startet <code style=\"color:var(--accent);font-size:0.85em;\">claude</code> normal. Session-Hooks registrieren den Agent, h&auml;ngen den MQTT-Listener des Agent-Loops an und tracken Datei&auml;nderungen. Koordination transparent.",
       "comm.automated.title": "Work-Stealing-Vorlagen",
-      "comm.automated.desc": "<code style=\"color:var(--accent);font-size:0.85em;">essaim run &lt;template&gt;</code> startet N Agent-Loops parallel in Worktrees. Jeder f&uuml;hrt das phasierte Protokoll aus: Discover im Read-Only, Dedup via Review, dann atomar Aufgaben aus dem Shared-Pool claimen.",
+      "comm.automated.desc": "<code style=\"color:var(--accent);font-size:0.85em;\">essaim run &lt;template&gt;</code> startet N Agent-Loops parallel in Worktrees. Jeder f&uuml;hrt das phasierte Protokoll aus: Discover im Read-Only, Dedup via Review, dann atomar Aufgaben aus dem Shared-Pool claimen.",
       "comm.flow.start": "Entwickler startet claude",
       "comm.flow.hook.start": "session-start-Hook feuert",
       "comm.flow.register": "Registrieren + MQTT abonnieren",
@@ -3581,7 +3581,7 @@
       "comm.interactive.title": "Claude Code 会话",
       "comm.interactive.desc": "每个开发者正常运行 <code style=\"color:var(--accent);font-size:0.85em;\">claude</code>。会话 hooks 自动注册智能体，附加 agent-loop 的 MQTT 监听器，并追踪文件编辑。协调透明。",
       "comm.automated.title": "Work-stealing 模板",
-      "comm.automated.desc": "<code style=\"color:var(--accent);font-size:0.85em;">essaim run &lt;template&gt;</code> 在并行的 worktrees 中启动 N 个 agent-loops。每个运行阶段化协议：read-only 中 discover，通过 review 去重，然后原子从共享池认领任务。",
+      "comm.automated.desc": "<code style=\"color:var(--accent);font-size:0.85em;\">essaim run &lt;template&gt;</code> 在并行的 worktrees 中启动 N 个 agent-loops。每个运行阶段化协议：read-only 中 discover，通过 review 去重，然后原子从共享池认领任务。",
       "comm.flow.start": "开发者启动 claude",
       "comm.flow.hook.start": "session-start hook 触发",
       "comm.flow.register": "注册 + 订阅 MQTT",
@@ -3808,7 +3808,7 @@
       "comm.interactive.title": "Claude Code セッション",
       "comm.interactive.desc": "各開発者が <code style=\"color:var(--accent);font-size:0.85em;\">claude</code> を普通に起動。セッション hooks がエージェントを自動登録し、agent-loop の MQTT リスナーを接続し、ファイル編集を追跡。連携は透過的。",
       "comm.automated.title": "Work-stealing テンプレート",
-      "comm.automated.desc": "<code style=\"color:var(--accent);font-size:0.85em;">essaim run &lt;template&gt;</code> が並列 worktrees で N 個の agent-loop を起動。それぞれがフェーズ化プロトコルを実行：read-only で discover、review で重複排除、その後共有プールからタスクをアトミックに claim。",
+      "comm.automated.desc": "<code style=\"color:var(--accent);font-size:0.85em;\">essaim run &lt;template&gt;</code> が並列 worktrees で N 個の agent-loop を起動。それぞれがフェーズ化プロトコルを実行：read-only で discover、review で重複排除、その後共有プールからタスクをアトミックに claim。",
       "comm.flow.start": "開発者が claude を起動",
       "comm.flow.hook.start": "session-start hook が発火",
       "comm.flow.register": "登録 + MQTT 購読",
