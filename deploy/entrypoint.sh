@@ -22,7 +22,7 @@ case "$MISSION" in
     # Findings → issues : une par branche de chasseur ayant des commits
     BASE=$(git rev-parse origin/HEAD 2>/dev/null || git rev-parse main)
     for BR in $(git branch --list 'mini-project-*' | tr -d ' +*'); do
-      N=$(git log --oneline "$BASE".."$BR" | wc -l)
+      N=$(git log --oneline "$BASE".."$BR" 2>/dev/null | wc -l) || N=0
       [ "$N" -gt 0 ] || continue
       git push origin "$BR:essaim/findings-$(date +%Y%m%d)-${BR#mini-project-}" || true
       TITLE=$(git log -1 --format=%s "$BR")
