@@ -1,0 +1,14 @@
+name: Mekova Bughunt
+description: "Chasse à la cause racine avec preuve par test (flow RCA)"
+phase: 2
+workspace: worktree
+stagger: { mode: random, delay: [5, 10] }
+timeout_minutes: 25
+metrics: [bugs_found, tests_added]
+compare_mode: false
+agents:
+  - idPrefix: mekova-chasseur
+    namePrefix: Chasseur Mekova
+    preset: mekova-bughunt
+    profile: codeur
+    count: dynamic
