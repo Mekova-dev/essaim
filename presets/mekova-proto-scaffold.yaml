@@ -1,0 +1,12 @@
+name: mekova-proto-scaffold
+description: "Scaffolder for the mekova-prototype template — bootstraps the Vite+Preact base + mock data before per-écran workers start"
+profile: codeur
+behaviors:
+  - project-context
+  - user-brief
+  - coordinator-rules
+  - announce-before-write
+  - check-interrupt
+  - activity-tracking
+  - shared-workspace
+  - proto-scaffold

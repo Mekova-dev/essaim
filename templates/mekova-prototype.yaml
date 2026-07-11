@@ -1,0 +1,30 @@
+name: Mekova Prototype
+description: "Scaffold Vite+Preact puis 1 worker par écran (greenfield découverte)"
+phase: 2
+workspace: shared
+stagger: { mode: fixed, delay: [0, 0] }
+timeout_minutes: 40
+metrics: [files_refactored, tests_passing]
+compare_mode: false
+agents:
+  # Phase 1: one scaffolder owns the Vite+Preact base + mock data.
+  # Runs first (launch_delay 0) and écran workers wait ~5 min before starting
+  # so the scaffold (routes + placeholders) is in place when they begin.
+  - idPrefix: proto-scaffold
+    namePrefix: Scaffolder
+    preset: mekova-proto-scaffold
+    profile: codeur
+    count: 1
+    launch_delay: 0
+  # Phase 2: one worker per écran (module = écran id from tmp/proto/ecrans.md).
+  - idPrefix: proto-ecran
+    namePrefix: Écran
+    preset: mekova-proto-ecran
+    profile: codeur
+    count: per-module
+    perModuleParam: { behavior: proto-ecran, key: target_ecran }
+    # Each worker advertises only its own écran as its module so the
+    # coordinator routes écran-targeted threads to the right owner.
+    perModuleRegisterOwnOnly: true
+    # 5 min for the scaffolder to deliver the routes + placeholders.
+    launch_delay: 300
