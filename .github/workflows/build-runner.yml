@@ -1,0 +1,40 @@
+name: Build essaim-runner
+on:
+  push:
+    branches: [deploy]
+    paths: [deploy/**, .github/workflows/build-runner.yml]
+  workflow_dispatch:
+    inputs:
+      essaim_ref:
+        description: "Ref upstream swoofer/essaim à embarquer"
+        default: "main"
+permissions:
+  contents: read
+  packages: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - id: ref
+        run: echo "sha=$(git ls-remote https://github.com/swoofer/essaim.git "${{ inputs.essaim_ref || 'main' }}" | cut -c1-7)" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: deploy
+          push: true
+          build-args: ESSAIM_REF=${{ inputs.essaim_ref || 'main' }}
+          tags: |
+            ghcr.io/mekova-dev/essaim-runner:${{ steps.ref.outputs.sha }}
+            ghcr.io/mekova-dev/essaim-runner:latest
+      - name: Dispatch tag update to platform
+        if: ${{ secrets.DISPATCH_TOKEN != '' }}
+        env: { GH_TOKEN: "${{ secrets.DISPATCH_TOKEN }}" }
+        run: |
+          gh api repos/Mekova-dev/mekova-platform/dispatches \
+            -f event_type=image-update-essaim-runner \
+            -F 'client_payload[sha]=${{ steps.ref.outputs.sha }}'
+      - name: Dispatch skipped
+        if: ${{ secrets.DISPATCH_TOKEN == '' }}
+        run: echo "::warning::DISPATCH_TOKEN absent — tag update to platform skipped"
