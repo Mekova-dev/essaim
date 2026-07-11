@@ -1,0 +1,23 @@
+name: mekova-dec-synth
+description: "Synthétiseur découverte — attend les 4 angles puis consolide"
+profile: communicant
+behaviors:
+  - project-context
+  - user-brief
+  - coordinator-rules
+  - announce-before-write
+  - check-interrupt
+  - activity-tracking
+  - shared-workspace
+  - sequential-wait
+  - dir-output
+  - discovery-synth
+params:
+  dir-output:
+    dirs: ["tmp/decouverte/"]
+  sequential-wait:
+    wait_for_status: "resolved"
+    predecessor_description: >
+      les 4 angles de découverte (features, risques, roi, questions) —
+      vérifie via list_threads que leurs QUATRE sessions sont resolved
+      avant de commencer ta synthèse
