@@ -28,13 +28,16 @@ jobs:
           tags: |
             ghcr.io/mekova-dev/essaim-runner:${{ steps.ref.outputs.sha }}
             ghcr.io/mekova-dev/essaim-runner:latest
+      - name: Check DISPATCH_TOKEN presence
+        env: { TOKEN_SET: "${{ secrets.DISPATCH_TOKEN != '' }}" }
+        run: echo "HAS_DISPATCH=$TOKEN_SET" >> "$GITHUB_ENV"
       - name: Dispatch tag update to platform
-        if: ${{ secrets.DISPATCH_TOKEN != '' }}
+        if: ${{ env.HAS_DISPATCH == 'true' }}
         env: { GH_TOKEN: "${{ secrets.DISPATCH_TOKEN }}" }
         run: |
           gh api repos/Mekova-dev/mekova-platform/dispatches \
             -f event_type=image-update-essaim-runner \
             -F 'client_payload[sha]=${{ steps.ref.outputs.sha }}'
       - name: Dispatch skipped
-        if: ${{ secrets.DISPATCH_TOKEN == '' }}
+        if: ${{ env.HAS_DISPATCH != 'true' }}
         run: echo "::warning::DISPATCH_TOKEN absent — tag update to platform skipped"
