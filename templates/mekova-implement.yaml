@@ -1,0 +1,21 @@
+name: Mekova Implement
+description: "Lead Mekova dispatch les tâches de tasks.md à N workers"
+phase: 2
+workspace: worktree
+stagger: { mode: random, delay: [8, 12] }
+timeout_minutes: 30
+metrics: [worker_idle_time, task_distribution_quality]
+compare_mode: false
+agents:
+  - idPrefix: mekova-lead
+    namePrefix: Lead Mekova
+    preset: mekova-implement-lead
+    profile: communicant
+    count: 1
+    launch_delay: 0
+  - idPrefix: mekova-worker
+    namePrefix: Worker Mekova
+    preset: mekova-implement-worker
+    profile: codeur
+    count: dynamic
+    launch_delay: 10

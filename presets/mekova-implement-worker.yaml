@@ -1,0 +1,13 @@
+name: mekova-implement-worker
+description: "Worker Mekova — implémente les tâches assignées selon la méthode"
+profile: codeur
+behaviors:
+  - project-context
+  - user-brief
+  - coordinator-rules
+  - announce-before-write
+  - check-interrupt
+  - activity-tracking
+  - worktree-isolation
+  - task-execution
+  - mission-tasks-md
