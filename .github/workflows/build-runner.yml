@@ -18,13 +18,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: docker/login-action@v3
         with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      # Résout le ref UNE fois : le sha complet pinne le contenu (build-arg) et le
+      # sha court étiquette l'image — tag et contenu ne peuvent pas diverger (TOCTOU).
       - id: ref
-        run: echo "sha=$(git ls-remote https://github.com/swoofer/essaim.git "${{ inputs.essaim_ref || 'main' }}" | cut -c1-7)" >> "$GITHUB_OUTPUT"
+        run: |
+          FULL=$(git ls-remote https://github.com/swoofer/essaim.git "${{ inputs.essaim_ref || 'main' }}" | cut -f1)
+          echo "full=${FULL}" >> "$GITHUB_OUTPUT"
+          echo "sha=${FULL:0:7}" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         with:
           context: deploy
           push: true
-          build-args: ESSAIM_REF=${{ inputs.essaim_ref || 'main' }}
+          build-args: ESSAIM_REF=${{ steps.ref.outputs.full }}
           tags: |
             ghcr.io/mekova-dev/essaim-runner:${{ steps.ref.outputs.sha }}
             ghcr.io/mekova-dev/essaim-runner:latest
