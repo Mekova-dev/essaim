@@ -62,7 +62,10 @@ git config user.name "essaim-runner" && git config user.email "essaim-runner@mek
 
 case "$MISSION" in
   raid)
-    BRIEF="Chasse nocturne autonome sur ${TARGET_REPO}. Cherche les bugs réels (logique, valeurs nulles, conditions limites) dans le code source du repo. Chaque bug confirmé = test de repro qui ÉCHOUE, commité sur ta branche + résumé de cause racine dans ton thread. NE CORRIGE RIEN. Termine le message de commit de ton test par une ligne seule \`Essaim-Target: <chemin du fichier source fautif>\` (ex: \`Essaim-Target: src/report.ts\`) — c'est ce qui permet de reconnaître un bug DÉJÀ signalé les nuits précédentes et de ne pas rouvrir la même issue."
+    # Le trailer `Essaim-Target:` n'est PAS demandé ici : c'est le contrat de
+    # sortie du preset mekova-bughunt (upstream), pas une propriété de ce job.
+    # Il vaut pour tout consommateur du preset, pas seulement pour le raid nocturne.
+    BRIEF="Chasse nocturne autonome sur ${TARGET_REPO}. Cherche les bugs réels (logique, valeurs nulles, conditions limites) dans le code source du repo. Chaque bug confirmé = test de repro qui ÉCHOUE, commité sur ta branche + résumé de cause racine dans ton thread. NE CORRIGE RIEN."
 
     essaim run mekova-bughunt -p . --agents "$AGENTS" \
       --coordinator-url "$COORDINATOR_URL" --timeout "$TIMEOUT" \
