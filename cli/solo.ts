@@ -4,8 +4,36 @@ import { existsSync } from "fs";
 import { spawn } from "child_process";
 import { scanProject } from "../src/orchestrator/scanner.js";
 import { listTemplates } from "../src/orchestrator/template-engine.js";
-import { buildSoloPrompt } from "../src/bridge.js";
-import { collect, parseSetParams } from "./params.js";
+import { buildSolo } from "../src/bridge.js";
+import { buildAllowedTools } from "../src/orchestrator/agent-launcher.js";
+import type { AgentConfig } from "../src/orchestrator/types.js";
+import { collect, parseSetParams, parseSetFileParams, buildParamTypeMap } from "./params.js";
+
+/**
+ * Build the argv for `claude -p`.
+ *
+ * Headless mode cannot answer a permission prompt: without an explicit
+ * --allowedTools allowlist the agent's Write hits a prompt nobody can approve
+ * and the artifact is silently never written (#34 — `solo gardien` produced its
+ * audit in stdout but no AUDIT.md). `run` mode always passed an allowlist; solo
+ * did not.
+ *
+ * Passing `tools` (even empty) rather than `mcpTools` is deliberate: it keeps
+ * buildAllowedTools from falling back to the full coordinator tool list for a
+ * solo agent that has no coordinator at all.
+ */
+export function buildSoloArgs(
+  prompt: string,
+  mcpTools: string[],
+  mcpConfigPath: string | null,
+): string[] {
+  const args = ["-p", prompt];
+  if (mcpConfigPath) {
+    args.push("--mcp-config", mcpConfigPath);
+  }
+  args.push("--allowedTools", buildAllowedTools({ tools: mcpTools } as AgentConfig));
+  return args;
+}
 
 export function createSoloCommand(): Command {
   return new Command("solo")
@@ -14,6 +42,7 @@ export function createSoloCommand(): Command {
     .option("-p, --project <path>", "Target project path", ".")
     .option("-t, --timeout <min>", "Timeout in minutes", "15")
     .option("--set <key=value>", "BCE parameter (repeatable)", collect, [])
+    .option("--set-file <behavior.param>=<path>", "BCE parameter, value read verbatim from a file (repeatable, wins over --set on conflict)", collect, [])
     .option(
       "--coordinator-url <url>",
       "Use an external coordinator at this URL instead of starting one in-process",
@@ -21,7 +50,13 @@ export function createSoloCommand(): Command {
     .action(
       (
         template: string | undefined,
-        opts: { project: string; timeout: string; set: string[]; coordinatorUrl?: string },
+        opts: {
+          project: string;
+          timeout: string;
+          set: string[];
+          setFile: string[];
+          coordinatorUrl?: string;
+        },
       ) => {
         // Resolve projectPath before listing/validating templates so that
         // project-local .essaim/templates/ entries (new ids, not just
@@ -52,21 +87,26 @@ export function createSoloCommand(): Command {
         const context = scanProject(projectPath);
 
         // Build prompt with solo_mode=true injected automatically
-        const setParams = parseSetParams(opts.set);
-        const prompt = buildSoloPrompt(template, context, setParams, projectPath);
+        const setParams = parseSetParams(opts.set, buildParamTypeMap());
+        const setFileParams = parseSetFileParams(opts.setFile);
+        for (const [behavior, values] of Object.entries(setFileParams)) {
+          setParams[behavior] = { ...setParams[behavior], ...values };
+        }
+        const { prompt, mcpTools } = buildSolo(template, context, setParams, projectPath);
+
+        const mcpConfigPath = resolve(projectPath, ".mcp.json");
+        const args = buildSoloArgs(
+          prompt,
+          mcpTools,
+          existsSync(mcpConfigPath) ? mcpConfigPath : null,
+        );
 
         console.log(`\nSolo mode: ${template}`);
         console.log(`  Project:  ${projectPath}`);
         console.log(`  Timeout:  ${opts.timeout} minutes`);
         console.log(`  Prompt:   ${prompt.length} chars`);
+        console.log(`  Tools:    ${args[args.indexOf("--allowedTools") + 1]}`);
         console.log(`\nLaunching Claude Code...\n`);
-
-        // Build claude args
-        const args = ["-p", prompt];
-        const mcpConfigPath = resolve(projectPath, ".mcp.json");
-        if (existsSync(mcpConfigPath)) {
-          args.push("--mcp-config", mcpConfigPath);
-        }
 
         const child = spawn("claude", args, {
           stdio: "inherit",
