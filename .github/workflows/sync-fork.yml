@@ -1,4 +1,4 @@
-name: Sync main from upstream
+name: Sync fork (main + deploy)
 on:
   schedule:
     - cron: "0 6 * * *"
@@ -13,3 +13,37 @@ jobs:
         env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
         run: |
           gh api repos/${{ github.repository }}/merge-upstream -f branch=main --jq '.message'
+
+      # `deploy` porte deploy/ + .github/ PAR-DESSUS main. Rien ne la synchronisait :
+      # elle a dérivé jusqu'à 19 commits de retard sans qu'aucun signal ne se déclenche.
+      # Toute personne — ou tout agent — raisonnant depuis ce checkout voyait un
+      # catalogue périmé (4 presets mekova au lieu de 11). Le silence était le vrai
+      # bug ; la dérive n'en était que le symptôme.
+      - uses: actions/checkout@v4
+        with: { ref: deploy, fetch-depth: 0 }
+
+      - name: Merge main -> deploy
+        run: |
+          set -euo pipefail
+          git config user.name "sync-fork"
+          git config user.email "sync-fork@users.noreply.github.com"
+          git fetch origin main
+
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "deploy est déjà à jour avec main — rien à faire"
+            exit 0
+          fi
+
+          BEHIND=$(git rev-list --count HEAD..origin/main)
+          echo "deploy a ${BEHIND} commit(s) de retard sur main — merge"
+
+          if ! git merge origin/main -m "chore(sync): merge main dans deploy (${BEHIND} commits)"; then
+            # Un conflit ne doit JAMAIS échouer en silence : deploy resterait en retard
+            # et l'image continuerait d'être raisonnée depuis un état divergent.
+            git merge --abort || true
+            echo "::error::Conflit en mergeant main dans deploy — deploy reste ${BEHIND} commits en retard, à résoudre à la main."
+            exit 1
+          fi
+
+          git push origin deploy
+          echo "✅ deploy resynchronisée (${BEHIND} commits)"
