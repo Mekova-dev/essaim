@@ -1,0 +1,5 @@
+# Les .sh de deploy/ tournent dans une image LINUX : un CRLF qui entrerait dans le blob
+# tuerait le conteneur sur un shebang illisible ("bad interpreter"). Verrouille en LF,
+# quel que soit le core.autocrlf de la machine qui commite.
+*.sh text eol=lf
+Dockerfile text eol=lf
