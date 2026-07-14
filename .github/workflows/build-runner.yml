@@ -17,6 +17,9 @@ on:
       essaim_ref:
         description: "Ref upstream swoofer/essaim à embarquer"
         default: "main"
+      catalog_ref:
+        description: "Ref du catalogue Mekova (mekova-shared-config)"
+        default: "main"
 permissions:
   contents: read
   packages: write
@@ -28,13 +31,40 @@ jobs:
       - uses: docker/login-action@v3
         with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
 
-      # Résout le ref UNE fois : le sha complet pinne le contenu (build-arg) et le
-      # sha court étiquette l'image — tag et contenu ne peuvent pas diverger (TOCTOU).
-      - id: ref
+      # Le catalogue Mekova vit dans un repo PRIVÉ (mekova-shared-config) : le
+      # GITHUB_TOKEN de CE repo (public) n'y a pas accès. Sans CATALOG_TOKEN, le
+      # runner n'aurait AUCUN des templates mekova-* que ses CronJobs exécutent.
+      # On échoue ICI, tout de suite, plutôt que de construire une image inutile
+      # dont l'échec ne se verrait qu'à 3h du matin.
+      - name: "Pré-vol — CATALOG_TOKEN"
+        env: { TOKEN: "${{ secrets.CATALOG_TOKEN }}" }
         run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::CATALOG_TOKEN absent. L'image ne peut pas embarquer le catalogue Mekova (repo privé mekova-shared-config)."
+            echo "::error::Créer un fine-grained PAT — lecture seule (Contents: read) sur Mekova-dev/mekova-shared-config — et l'ajouter en secret CATALOG_TOKEN de ce repo."
+            exit 1
+          fi
+
+      # Résout les refs UNE fois : le sha complet pinne le contenu (build-arg) et le
+      # sha court étiquette l'image — tag et contenu ne peuvent pas diverger (TOCTOU).
+      # Le catalogue est pinné AUSSI : une image reproductible sur le moteur mais
+      # flottante sur les prompts serait le pire des deux mondes à déboguer.
+      - id: ref
+        env: { CATALOG_TOKEN: "${{ secrets.CATALOG_TOKEN }}" }
+        run: |
+          set -euo pipefail
           FULL=$(git ls-remote https://github.com/swoofer/essaim.git "${{ inputs.essaim_ref || 'main' }}" | cut -f1)
           echo "full=${FULL}" >> "$GITHUB_OUTPUT"
           echo "sha=${FULL:0:7}" >> "$GITHUB_OUTPUT"
+
+          CAT=$(git ls-remote "https://x-access-token:${CATALOG_TOKEN}@github.com/Mekova-dev/mekova-shared-config.git" \
+                "${{ inputs.catalog_ref || 'main' }}" | cut -f1)
+          if [ -z "$CAT" ]; then
+            echo "::error::Impossible de résoudre le catalogue Mekova — CATALOG_TOKEN invalide ou sans accès à mekova-shared-config ?"
+            exit 1
+          fi
+          echo "catalog=${CAT}" >> "$GITHUB_OUTPUT"
+          echo "Catalogue Mekova pinné à ${CAT:0:7}"
 
       # Build LOCAL d'abord (load, pas push) : rien ne part sur GHCR avant que les
       # garde-fous soient verts. Un CronJob qui échoue le fait à 3h du matin, avec
@@ -46,7 +76,11 @@ jobs:
           context: deploy
           load: true
           push: false
-          build-args: ESSAIM_REF=${{ steps.ref.outputs.full }}
+          build-args: |
+            ESSAIM_REF=${{ steps.ref.outputs.full }}
+            CATALOG_REF=${{ steps.ref.outputs.catalog }}
+          secrets: |
+            catalog_token=${{ secrets.CATALOG_TOKEN }}
           tags: essaim-runner:candidate
 
       # ── Garde-fou 1 : le CONTRAT entre entrypoint.sh et le catalogue embarqué ──
@@ -77,8 +111,11 @@ jobs:
           fi
           echo "entrypoint.sh lit le trailer '${MARKER}' — le catalogue embarqué doit le réclamer"
 
+          # Cherche dans les DEUX emplacements : pendant la bascule du catalogue Mekova
+          # hors d'essaim, mekova-bughunt existe aux deux endroits (c'est le filet).
+          # Après la bascule, il n'est plus que dans /opt/mekova-catalog.
           if ! docker run --rm --entrypoint sh essaim-runner:candidate -c \
-            "grep -q '${MARKER}' \"\$(npm root -g)/essaim/presets/mekova-bughunt.yaml\""; then
+            "cat /opt/mekova-catalog/presets/mekova-bughunt.yaml \"\$(npm root -g)/essaim/presets/mekova-bughunt.yaml\" 2>/dev/null | grep -q '${MARKER}'"; then
             echo "::error::Contrat rompu — entrypoint.sh lit '${MARKER}', mais le preset embarqué (essaim @ ${{ steps.ref.outputs.sha }}) ne le réclame PAS."
             echo "::error::Les agents n'émettraient jamais le trailer : la dédup des findings retomberait EN SILENCE sur son empreinte de repli, et les doublons reviendraient sans que rien n'échoue."
             echo "::error::Cause probable : le preset qui porte le contrat n'est pas encore mergé upstream. Relancer ce build après le merge."
