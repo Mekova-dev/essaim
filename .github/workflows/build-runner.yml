@@ -3,10 +3,22 @@ on:
   push:
     branches: [deploy]
     paths: [deploy/**, .github/workflows/build-runner.yml]
+  # L'image embarque essaim (et son CATALOGUE) depuis l'upstream à ESSAIM_REF.
+  # Sans ce schedule, un changement upstream — nouveau contrat de prompt, nouveau
+  # preset, correctif — ne déclenche AUCUN rebuild : `:latest` peut prendre des
+  # semaines de retard sans que rien ne le dise. C'est exactement comme ça que
+  # `entrypoint.sh` a failli se retrouver à attendre un trailer que le catalogue
+  # embarqué ne demandait pas encore (le contrat Essaim-Target n'a atterri que
+  # parce qu'un commit deploy/ est passé par hasard juste après).
+  schedule:
+    - cron: "0 7 * * *"
   workflow_dispatch:
     inputs:
       essaim_ref:
         description: "Ref upstream swoofer/essaim à embarquer"
+        default: "main"
+      catalog_ref:
+        description: "Ref du catalogue Mekova (mekova-shared-config)"
         default: "main"
 permissions:
   contents: read
@@ -18,21 +30,124 @@ jobs:
       - uses: actions/checkout@v4
       - uses: docker/login-action@v3
         with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
-      # Résout le ref UNE fois : le sha complet pinne le contenu (build-arg) et le
-      # sha court étiquette l'image — tag et contenu ne peuvent pas diverger (TOCTOU).
-      - id: ref
+
+      # Le catalogue Mekova vit dans un repo PRIVÉ (mekova-shared-config) : le
+      # GITHUB_TOKEN de CE repo (public) n'y a pas accès. Sans CATALOG_TOKEN, le
+      # runner n'aurait AUCUN des templates mekova-* que ses CronJobs exécutent.
+      # On échoue ICI, tout de suite, plutôt que de construire une image inutile
+      # dont l'échec ne se verrait qu'à 3h du matin.
+      - name: "Pré-vol — CATALOG_TOKEN"
+        env: { TOKEN: "${{ secrets.CATALOG_TOKEN }}" }
         run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::CATALOG_TOKEN absent. L'image ne peut pas embarquer le catalogue Mekova (repo privé mekova-shared-config)."
+            echo "::error::Créer un fine-grained PAT — lecture seule (Contents: read) sur Mekova-dev/mekova-shared-config — et l'ajouter en secret CATALOG_TOKEN de ce repo."
+            exit 1
+          fi
+
+      # Résout les refs UNE fois : le sha complet pinne le contenu (build-arg) et le
+      # sha court étiquette l'image — tag et contenu ne peuvent pas diverger (TOCTOU).
+      # Le catalogue est pinné AUSSI : une image reproductible sur le moteur mais
+      # flottante sur les prompts serait le pire des deux mondes à déboguer.
+      - id: ref
+        env: { CATALOG_TOKEN: "${{ secrets.CATALOG_TOKEN }}" }
+        run: |
+          set -euo pipefail
           FULL=$(git ls-remote https://github.com/swoofer/essaim.git "${{ inputs.essaim_ref || 'main' }}" | cut -f1)
           echo "full=${FULL}" >> "$GITHUB_OUTPUT"
           echo "sha=${FULL:0:7}" >> "$GITHUB_OUTPUT"
+
+          CAT=$(git ls-remote "https://x-access-token:${CATALOG_TOKEN}@github.com/Mekova-dev/mekova-shared-config.git" \
+                "${{ inputs.catalog_ref || 'main' }}" | cut -f1)
+          if [ -z "$CAT" ]; then
+            echo "::error::Impossible de résoudre le catalogue Mekova — CATALOG_TOKEN invalide ou sans accès à mekova-shared-config ?"
+            exit 1
+          fi
+          echo "catalog=${CAT}" >> "$GITHUB_OUTPUT"
+          echo "Catalogue Mekova pinné à ${CAT:0:7}"
+
+      # Build LOCAL d'abord (load, pas push) : rien ne part sur GHCR avant que les
+      # garde-fous soient verts. Un CronJob qui échoue le fait à 3h du matin, avec
+      # `backoffLimit: 0` et `ttlSecondsAfterFinished: 86400` — le Job disparaît
+      # sous 24h et personne ne voit rien. Le coût d'un smoke ici est nul ; le coût
+      # de son absence est un raid mort pendant des semaines.
       - uses: docker/build-push-action@v6
         with:
           context: deploy
-          push: true
-          build-args: ESSAIM_REF=${{ steps.ref.outputs.full }}
-          tags: |
-            ghcr.io/mekova-dev/essaim-runner:${{ steps.ref.outputs.sha }}
-            ghcr.io/mekova-dev/essaim-runner:latest
+          load: true
+          push: false
+          build-args: |
+            ESSAIM_REF=${{ steps.ref.outputs.full }}
+            CATALOG_REF=${{ steps.ref.outputs.catalog }}
+          secrets: |
+            catalog_token=${{ secrets.CATALOG_TOKEN }}
+          tags: essaim-runner:candidate
+
+      # ── Garde-fou 1 : le CONTRAT entre entrypoint.sh et le catalogue embarqué ──
+      # entrypoint.sh déduplique les findings en lisant un trailer `Essaim-Target:`
+      # dans les commits des agents. Ce trailer n'existe que si le PRESET embarqué le
+      # réclame. Les deux moitiés vivent dans DEUX REPOS différents (le fork pour le
+      # script, l'upstream pour le preset) et rien ne garantissait qu'elles voyagent
+      # ensemble. Si elles se désynchronisent, la dédup retombe en SILENCE sur son
+      # empreinte de repli et les doublons reviennent — avec l'air de marcher.
+      #
+      # Le marqueur est DÉRIVÉ d'entrypoint.sh, jamais écrit en dur ici : le jour où
+      # le script cesse de dépendre d'un trailer, le garde-fou s'éteint tout seul au
+      # lieu de mentir.
+      #
+      # On vérifie le PRESET embarqué, et non le prompt assemblé : `essaim run
+      # --dry-run` n'imprime aujourd'hui qu'un résumé (noms d'agents, taille des
+      # prompts), pas leur texte — et le contrat vit dans le prompt de la phase
+      # `execute`, qui n'est de toute façon pas imprimable. Un `--print-prompts`
+      # upstream rendrait ce contrôle encore plus direct ; en attendant, le preset
+      # embarqué EST la source du trailer, donc l'assertion porte au bon endroit.
+      - name: "Garde-fou — le catalogue embarqué porte le contrat lu par entrypoint.sh"
+        run: |
+          set -euo pipefail
+          MARKER=$(grep -oE 'Essaim-Target' deploy/entrypoint.sh | head -1 || true)
+          if [ -z "$MARKER" ]; then
+            echo "entrypoint.sh ne dépend d'aucun trailer — garde-fou sans objet"
+            exit 0
+          fi
+          echo "entrypoint.sh lit le trailer '${MARKER}' — le catalogue embarqué doit le réclamer"
+
+          # Cherche dans les DEUX emplacements : pendant la bascule du catalogue Mekova
+          # hors d'essaim, mekova-bughunt existe aux deux endroits (c'est le filet).
+          # Après la bascule, il n'est plus que dans /opt/mekova-catalog.
+          if ! docker run --rm --entrypoint sh essaim-runner:candidate -c \
+            "cat /opt/mekova-catalog/presets/mekova-bughunt.yaml \"\$(npm root -g)/essaim/presets/mekova-bughunt.yaml\" 2>/dev/null | grep -q '${MARKER}'"; then
+            echo "::error::Contrat rompu — entrypoint.sh lit '${MARKER}', mais le preset embarqué (essaim @ ${{ steps.ref.outputs.sha }}) ne le réclame PAS."
+            echo "::error::Les agents n'émettraient jamais le trailer : la dédup des findings retomberait EN SILENCE sur son empreinte de repli, et les doublons reviendraient sans que rien n'échoue."
+            echo "::error::Cause probable : le preset qui porte le contrat n'est pas encore mergé upstream. Relancer ce build après le merge."
+            exit 1
+          fi
+          echo "✅ contrat présent dans le catalogue réellement embarqué"
+
+      # ── Garde-fou 2 : les 2 missions résolvent (template → presets → behaviors) ──
+      # Un catalogue amputé (preset manquant, behavior renommé) échoue avec
+      # « Unknown template » AU RUNTIME. Ici, ça coûte 10 secondes.
+      - name: "Garde-fou — les missions raid et gardien résolvent"
+        run: |
+          set -euo pipefail
+          for MISSION in mekova-bughunt mekova-review; do
+            echo "→ ${MISSION}"
+            docker run --rm --entrypoint sh essaim-runner:candidate -c "
+              set -e
+              mkdir -p /tmp/probe && cd /tmp/probe && git init -q .
+              essaim run ${MISSION} -p . --dry-run > /dev/null
+            " || { echo "::error::${MISSION} ne résout pas dans l'image — le CronJob mourrait à 3h du matin."; exit 1; }
+          done
+          echo "✅ raid et gardien résolvent"
+
+      # Garde-fous verts → on publie.
+      - name: Push GHCR
+        run: |
+          set -euo pipefail
+          for TAG in "${{ steps.ref.outputs.sha }}" latest; do
+            docker tag essaim-runner:candidate "ghcr.io/mekova-dev/essaim-runner:${TAG}"
+            docker push "ghcr.io/mekova-dev/essaim-runner:${TAG}"
+          done
+
       - name: Check DISPATCH_TOKEN presence
         env: { TOKEN_SET: "${{ secrets.DISPATCH_TOKEN != '' }}" }
         run: echo "HAS_DISPATCH=$TOKEN_SET" >> "$GITHUB_ENV"
