@@ -10,7 +10,7 @@
 
 </div>
 
-[Problem](#the-problem) · [How it works](#how-it-works) · [Quickstart](#quickstart) · [Architecture](#architecture) · [BCE](#bce--behavior-composition-engine) · [Phases](#work-stealing-phases) · [Effort](#effort-profiles) · [CLI](#cli) · [Templates](#portable-templates) · [Quota](#anthropic-quota-pre-flight) · [Config](#configuration) · [Related](#related-projects)
+[Problem](#the-problem) · [How it works](#how-it-works) · [Quickstart](#quickstart) · [Architecture](#architecture) · [BCE](#bce--behavior-composition-engine) · [Phases](#work-stealing-phases) · [Effort](#effort-profiles) · [CLI](#cli) · [Templates](#portable-templates) · [Catalogs](#external-catalogs) · [Quota](#anthropic-quota-pre-flight) · [Config](#configuration) · [Related](#related-projects)
 
 ---
 
@@ -52,7 +52,7 @@ Developer A                    Developer B
 
 The consultation cycle — **announce → detect → consult → resolve** — runs in the agent-loop without a sidecar. Agents call `announce_work` before coding; the coordinator scores impact and opens a thread on score ≥ 90; MQTT pushes the thread to affected peers between turns; the thread closes on consensus, timeout, or gray-zone auto-resolve.
 
-essaim ships the orchestrator (agent-loop, preset runner, phase scheduler) and the behavior catalog (32 behaviors, 21 presets, 3 composition rules). The coordination server lives in [`mcp-coordinator`](https://github.com/swoofer/mcp-coordinator#readme); the prompt assembly engine in [`@swoofer/promptweave`](https://github.com/swoofer/promptweave#readme). essaim wires them together and ships the CLI.
+essaim ships the orchestrator (agent-loop, preset runner, phase scheduler) and a generic behavior catalog (39 behaviors, 28 presets, 3 composition rules, 14 templates) — domain-specific artifacts belong in an [external catalog](#external-catalogs), not here. The coordination server lives in [`mcp-coordinator`](https://github.com/swoofer/mcp-coordinator#readme); the prompt assembly engine in [`@swoofer/promptweave`](https://github.com/swoofer/promptweave#readme). essaim wires them together and ships the CLI.
 
 ---
 
@@ -105,7 +105,7 @@ essaim (this package)
   +-- mcp-coordinator        (coordination server: MCP tools, SQLite, MQTT broker, dashboard)
 ```
 
-essaim owns the **catalog** (32 behaviors, 21 presets, 3 composition rules, 6 hook scripts), the **orchestrator** (phase scheduler, effort router, work-stealing loop), and the **CLI**. `@swoofer/promptweave` owns the BCE engine (resolver, validator, assembler). `mcp-coordinator` owns everything coordination-side: 26 MCP tools, impact scoring, MQTT broker + topic protocol, SQLite, and the dashboard at `http://localhost:3100/dashboard`.
+essaim owns the **catalog** (39 behaviors, 28 presets, 3 composition rules, 7 hook scripts — all generic; see [External Catalogs](#external-catalogs) for your own), the **orchestrator** (phase scheduler, effort router, work-stealing loop), and the **CLI**. `@swoofer/promptweave` owns the BCE engine (resolver, validator, assembler). `mcp-coordinator` owns everything coordination-side: 26 MCP tools, impact scoring, MQTT broker + topic protocol, SQLite, and the dashboard at `http://localhost:3100/dashboard`.
 
 **For the tool reference, scoring layers, MQTT topics, dashboard panels, and server-side config, read [mcp-coordinator's README](https://github.com/swoofer/mcp-coordinator#readme).** This file documents only essaim's own surface.
 
@@ -116,7 +116,7 @@ essaim owns the **catalog** (32 behaviors, 21 presets, 3 composition rules, 6 ho
 Every agent prompt, hook, and MCP config is **assembled, not written**. essaim ships a catalog of reusable YAML modules; `@swoofer/promptweave` resolves the preset, validates, composes, and emits `prompt.md` + `hooks/*.sh` + `.mcp.json` for each agent.
 
 ```
-32 behaviors    21 presets    3 composition rules    6 hook scripts    3 workflow phases
+39 behaviors    28 presets    3 composition rules    7 hook scripts    3 workflow phases
 ```
 
 ### Three behavioral layers
@@ -127,7 +127,7 @@ Behaviors contribute numbered sections that sort deterministically into a final 
 |-------|----------|----------------|------------------|
 | Foundation | 000-009 | Who I am, which project | `project-context`, `user-brief`, `coordinator-rules` |
 | Patterns | 010-029 | How I coordinate | `announce-before-write`, `conflict-resolution`, `worktree-isolation`, `sequential-wait` |
-| Mission | 030-050 | What I actually do | bug-hunting, test-writing, refactoring, code-review, debate, quiz, translation, sequential pipelines — 21 in total |
+| Mission | 030-050 | What I actually do | bug-hunting, test-writing, refactoring, code-review, debate, quiz, translation, migration, sequential pipelines — 25 in total |
 | Transversal | 050-099 | Constraints and style | `activity-tracking`, `read-only-mode`, `audit-output` |
 
 ### Composition rules
@@ -151,10 +151,13 @@ input as missing:
 ```yaml
 params:
   sequential-wait:
-    expect_files: ["tmp/decouverte/features.yaml", "tmp/decouverte/risques.yaml"]
+    expect_files: ["tmp/audit/inventaire.yaml", "tmp/audit/risques.yaml"]
     retry_attempts: 3        # default
     retry_delay_seconds: 10  # default
 ```
+
+`phare-synth` is the shipped example: it waits on the four `phare` specialists and
+gates on the four YAML files they write.
 
 The producing side owes the other half of the contract: **write the artifact, read it
 back, and only then resolve** — a mission prompt that resolves before it writes will
@@ -257,24 +260,24 @@ after-hook); remaining steps are recorded as `skipped`.
 
 ```yaml
 # pipeline.yaml — paths are relative to this file's directory
-name: decouverte-complete
+name: audit-then-migrate
 steps:
-  - name: analyse
-    template: mekova-decouverte
-    project: ../specs
+  - name: audit
+    template: phare
+    project: ../legacy
     set:
-      discovery-synth.projet: commandes-boulangerie
+      audit-output.paths: '["MIGRATION_AUDIT.md"]'
     set_file:
-      user-brief.brief: tmp/brief-decouverte.txt   # value read verbatim, wins over set
+      user-brief.brief: tmp/brief-audit.txt        # value read verbatim, wins over set
     timeout_minutes: 20
-  - name: proto
-    template: mekova-prototype
-    project: ../code
-    modules_file: tmp/proto/modules.txt            # one id per line — or modules: [a, b]
+  - name: migrate
+    template: migrate-phase2
+    project: ../web
+    modules_file: tmp/migrate/slices.txt           # one id per line — or modules: [a, b]
     set_file:
-      user-brief.brief: tmp/brief-proto.txt
+      user-brief.brief: tmp/brief-migrate.txt
     hooks:
-      before: ["cp ../specs/specs/x/ecrans.md tmp/proto/ecrans.md"]
+      before: ["cp ../legacy/MIGRATION_AUDIT.md tmp/migrate/audit.md"]
       after: ["npm run build"]                      # non-zero after-hook fails the step
 ```
 
@@ -308,8 +311,42 @@ Language-agnostic templates. `essaim scan` auto-detects the stack; the template 
 | `arene` | Code quiz / trivia | 3 | one-shot, keep_open |
 | `carrefour` | Intentional conflict test | 2-3 | one-shot |
 | `babel` | Documentation translation | 2 | sequential |
+| `phare` | 4 specialists + reconciliator (multi-angle audit) | 5 | one-shot, artifact-gated |
+| `migrate-phase2` | Scaffolder + per-module migrators | 1+N | one-shot, staggered |
 
 For per-template descriptions and the preset roles each one wires together, run `essaim list presets` or read [`compositions/`](./compositions/) in this repo.
+
+---
+
+## External Catalogs
+
+The bundled catalog is deliberately **generic** — nothing domain- or company-specific
+ships in this repo. Your own behaviors, presets, compositions, and templates live in
+**your** catalog, in **your** repo, and essaim loads them alongside the bundled ones.
+
+A catalog is any directory with the four familiar sub-directories:
+
+```
+my-catalog/
+  behaviors/      presets/      compositions/      templates/
+```
+
+Three ways to point essaim at one — they stack, and **the last root wins** on an id
+collision (so an external catalog can also *override* a bundled artifact):
+
+```bash
+essaim run my-preset -p . --catalog ~/my-catalog          # explicit, repeatable
+ESSAIM_CATALOG=~/my-catalog:~/team-catalog essaim list     # ambient (PATH-style, OS delimiter)
+# <project>/.essaim/{behaviors,presets,templates}/         # project-local, highest precedence
+```
+
+Precedence: `bundled` < `ESSAIM_CATALOG` < `--catalog` < `<project>/.essaim/`.
+`run`, `solo`, and `list` take the `--catalog` flag; a pipeline declares its catalogs
+once, at the top of its YAML (`catalog: [../my-catalog]`, paths relative to the
+pipeline file), so it stays self-contained instead of depending on an ambient env var.
+
+External presets can freely compose bundled behaviors (`project-context`,
+`sequential-wait`, `read-only-mode`, …) — the resolver sees one merged registry.
 
 ---
 
