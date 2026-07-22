@@ -1285,4 +1285,4 @@ git commit -m "feat(security): reporter 'Moteur de sécurité' section (gated on
 
 ## Downstream plan
 
-- **Plan 4 — Surface:** `behaviors/security-fix.yaml` + `security-untrusted-findings.yaml`, `presets/sentinelle.yaml` + `sentinelle-triage.yaml`, `cli/security.ts` (`essaim security` — builds `MiniProject.security`, `--secrets-file`, `--authorize`, rejects external `--coordinator-url`, Strix-mirrored exit codes), `essaim init --security` (scaffold + `.gitignore` patch), `docs/security/{licensing,THIRD_PARTY_LICENSES}.md`, and the `security-no-real-engines` + `security-types-integration` guard tests.
+- **Plan 4 — Surface:** `behaviors/security-fix.yaml` + `security-untrusted-findings.yaml`, `presets/sentinelle.yaml` + `templates/sentinelle.yaml` (`--triage-only` = zero-agent run, no separate preset), `cli/security.ts` (`essaim security` — builds `MiniProject.security`, `--secrets-file`, `--authorize`, rejects external `--coordinator-url`, Strix-mirrored exit codes), `essaim init --security` (scaffold + `.gitignore` patch), `docs/security/{licensing,THIRD_PARTY_LICENSES}.md`, and the `security-no-real-engines` + `security-types-integration` guard tests.

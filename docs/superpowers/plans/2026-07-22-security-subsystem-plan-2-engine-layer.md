@@ -1347,5 +1347,5 @@ git commit -m "feat(security): operator kill-switch + orphan-container sweep"
 
 ## Downstream plans
 
-- **Plan 3 — Coordinator + verify + orchestrator wiring:** `ingest.ts` (findingToAnnounce/renderPlan chokepoint; POST `/api/announce keep_open` + `/api/register` synthetic author), `verify.ts` (re-scan → verified/reopened + `/api/unclaim-task`), the secrets env-file writer, `runSecurityPrePhase` (scope→scan→baseline→ingest), `MiniProject.security` + `RunResult.security`, orchestrator steps 3.5/6, `reporter.ts` section, and the **`claude-stream.ts` env-allowlist** edit.
+- **Plan 3 — Coordinator + verify + orchestrator wiring:** `ingest.ts` (findingToAnnounce/renderPlan chokepoint; POST `/api/announce keep_open` + `/api/register` synthetic author), `verify.ts` (re-scan → verified/reopened, **report-only** — real thread-reopen deferred to v2), the secrets env-file writer, `runSecurityPrePhase` (scope→scan→baseline→ingest), `MiniProject.security` + `RunResult.security`, orchestrator steps 3.5/6, `reporter.ts` section, and the **`claude-stream.ts` env-allowlist** edit.
 - **Plan 4 — Surface:** behaviors + `sentinelle` presets, `essaim security` CLI, `init --security`, docs, hermeticity + types-integration guard tests.
