@@ -759,7 +759,9 @@ git commit -m "feat(security): Strix report parser + Finding normalization (form
 
 ---
 
-### Task 5: Strix adapter (exit-code mapping, version/zero guards, abort→kill)
+### Task 5: Strix adapter (exit-code mapping, zero-reads guard, abort→kill)
+
+> **On the version gate:** the spec mentions a `version_unsupported` failure. A strict Strix *version-range* gate is **deferred** until a real Strix version is captured (spec §16) — implementing a range check against guessed versions would be fake precision. The **load-bearing** guard implemented here is the *report-shape* guard: `parseStrixReport` throws `StrixParseError` on any unrecognized/zero-from-nonempty report, which the adapter maps to `status:"error"` (never a false `no_vulns`). The `EngineError.kind:"version_unsupported"` value stays in the enum for v2.
 
 **Files:**
 - Create: `src/security/adapters/strix.ts`
@@ -786,7 +788,7 @@ import type { ResolvedScope } from "../../src/security/types.js";
 
 const fx = (name: string) => readFileSync(join(__dirname, "..", "fixtures", "security", name), "utf8");
 
-const scope: ResolvedScope = { targetPath: "C:/repo", mode: "diff", diffBase: "abc123", excludeMatchers: [] };
+const scope: ResolvedScope = { targetPath: "C:/repo", mode: "diff", scanMode: "quick", diffBase: "abc123", excludeMatchers: [] };
 
 // Build a SpawnFn that emits the given stdout + exit code, and records argv.
 function scriptedSpawn(stdout: string, code: number, capture?: { args?: string[] }): SpawnFn {
@@ -852,6 +854,30 @@ describe("StrixAdapter.run — exit-code mapping", () => {
     const res = await a.run(scope, new AbortController().signal);
     expect(res.stdoutExcerpt ?? "").not.toContain("sk-abcDEF0123456789ghijklmnop");
   });
+
+  it("abort → status timeout AND issues a docker kill of the tracked container", async () => {
+    const invocations: string[][] = [];
+    // run child: closes only when killed via the signal; kill child: closes immediately.
+    const spawnFn: SpawnFn = ((_cmd: string, args: string[]) => {
+      invocations.push(args);
+      const child: any = { stdout: { on: () => {} }, stderr: { on: () => {} }, kill: () => {}, _close: null };
+      child.on = (ev: string, cb: (code: number | null) => void) => { if (ev === "close") child._close = cb; };
+      if (args[0] === "kill") {
+        setTimeout(() => child._close && child._close(0), 0); // teardown closes immediately
+      } else {
+        child.kill = () => child._close && child._close(null); // run child closes only when killed
+      }
+      return child;
+    }) as unknown as SpawnFn;
+
+    const ac = new AbortController();
+    const a = createStrixAdapter({ runId: "r1", spawnFn });
+    const p = a.run(scope, ac.signal);
+    setTimeout(() => ac.abort(), 5);
+    const res = await p;
+    expect(res.status).toBe("timeout");
+    expect(invocations.some((args) => args[0] === "kill")).toBe(true); // docker kill happened
+  });
 });
 ```
 
@@ -867,7 +893,7 @@ Expected: FAIL — cannot resolve `../../src/security/adapters/strix.js`.
 import { randomUUID } from "node:crypto";
 import type { EngineAdapter, EngineCapabilities, EngineRunResult, ResolvedScope } from "../types.js";
 import { spawnCaptured, type SpawnFn } from "./base.js";
-import { PINNED_STRIX_IMAGE, containerName, dockerMountArg, dockerRunArgs } from "../docker.js";
+import { PINNED_STRIX_IMAGE, containerName, dockerMountArg, dockerRunArgs, dockerInspectArgs } from "../docker.js";
 import { parseStrixReport, toFinding, StrixParseError } from "./strix-parse.js";
 import { redact } from "../redact.js";
 import { createLogger } from "../../logger.js";
@@ -904,15 +930,15 @@ export function createStrixAdapter(deps: StrixAdapterDeps): EngineAdapter {
     capabilities: STRIX_CAPABILITIES,
 
     async healthCheck() {
-      // Docker backend + image present. (Real invocation happens in run().)
-      const info = await spawnCaptured("docker", ["info"], { spawnFn: deps.spawnFn }).catch((e: Error) => ({
-        code: 1,
-        stdout: "",
-        stderr: e.message,
-        timedOut: false,
-      }));
+      // Docker backend + pinned image both present. (Real invocation happens in run().)
+      const fail = (e: Error) => ({ code: 1, stdout: "", stderr: e.message, timedOut: false });
+      const info = await spawnCaptured("docker", ["info"], { spawnFn: deps.spawnFn }).catch(fail);
       if (info.code !== 0) {
         return { ok: false, detail: "Docker backend unavailable (docker info failed) — Strix cannot run" };
+      }
+      const inspect = await spawnCaptured("docker", dockerInspectArgs(image), { spawnFn: deps.spawnFn }).catch(fail);
+      if (inspect.code !== 0) {
+        return { ok: false, detail: `Strix image not present locally (${image}) — pull the pinned digest first` };
       }
       return { ok: true, detail: `docker ok; image ${image}` };
     },
@@ -926,7 +952,7 @@ export function createStrixAdapter(deps: StrixAdapterDeps): EngineAdapter {
         mount: dockerMountArg(scope.targetPath),
         envFile: deps.envFile,
         target: "/src",
-        scanMode: "quick",
+        scanMode: scope.scanMode,
         scopeMode: scope.mode,
         diffBase: scope.diffBase,
         instruction: deps.instruction ?? `Scan /src. ${scope.mode === "diff" ? `Only changes since ${scope.diffBase}.` : "Full tree."}`,
@@ -1019,7 +1045,7 @@ import { runSecurityScan } from "../../src/security/scan.js";
 import { createRegistry } from "../../src/security/registry.js";
 import type { EngineAdapter, EngineId, ResolvedScope, Finding } from "../../src/security/types.js";
 
-const scope: ResolvedScope = { targetPath: "/repo", mode: "full", excludeMatchers: [] };
+const scope: ResolvedScope = { targetPath: "/repo", mode: "full", scanMode: "quick", excludeMatchers: [] };
 
 function finding(id: string): Finding {
   return {
@@ -1163,12 +1189,150 @@ git commit -m "feat(security): multi-engine scan orchestrator + default registry
 
 ---
 
+### Task 7: Kill-switch + orphan-container sweep (safety)
+
+**Files:**
+- Create: `src/security/killswitch.ts`
+- Test: `tests/unit/security-killswitch.test.ts`
+
+**Interfaces:**
+- Consumes: `spawnCaptured`, `SpawnFn` (from `./adapters/base.js`); `containerName` (from `./docker.js`); `node:fs`, `node:path`.
+- Produces:
+  - `isHaltRequested(projectPath: string): boolean` (true if `reports/security/STOP` exists or `ESSAIM_SECURITY_HALT=1`).
+  - `sweepOrphanContainers(runId: string, opts?: { spawnFn?: SpawnFn }): Promise<number>` (`docker ps` for `essaim-security-<runId>` → `docker kill` each; returns count killed).
+
+- [ ] **Step 1: Write the failing test**
+
+Create `tests/unit/security-killswitch.test.ts`:
+
+```ts
+import { describe, it, expect, afterEach } from "vitest";
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { isHaltRequested, sweepOrphanContainers } from "../../src/security/killswitch.js";
+import type { SpawnFn } from "../../src/security/adapters/base.js";
+
+afterEach(() => {
+  delete process.env.ESSAIM_SECURITY_HALT;
+});
+
+describe("isHaltRequested", () => {
+  it("false when neither the STOP file nor the env flag is set", () => {
+    const dir = mkdtempSync(join(tmpdir(), "halt-"));
+    expect(isHaltRequested(dir)).toBe(false);
+    rmSync(dir, { recursive: true, force: true });
+  });
+  it("true when ESSAIM_SECURITY_HALT=1", () => {
+    const dir = mkdtempSync(join(tmpdir(), "halt-"));
+    process.env.ESSAIM_SECURITY_HALT = "1";
+    expect(isHaltRequested(dir)).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
+  });
+  it("true when reports/security/STOP exists", () => {
+    const dir = mkdtempSync(join(tmpdir(), "halt-"));
+    mkdirSync(join(dir, "reports", "security"), { recursive: true });
+    writeFileSync(join(dir, "reports", "security", "STOP"), "");
+    expect(isHaltRequested(dir)).toBe(true);
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("sweepOrphanContainers", () => {
+  // ps child prints one container id; kill child closes cleanly.
+  function spawnFor(psOutput: string, capture: string[][]): SpawnFn {
+    return ((_cmd: string, args: string[]) => {
+      capture.push(args);
+      const child: any = {
+        stdout: { on: (_e: "data", cb: (c: string) => void) => { if (args[0] === "ps") setTimeout(() => cb(psOutput), 0); } },
+        stderr: { on: () => {} },
+        kill: () => {},
+        on: (ev: string, cb: (code: number | null) => void) => { if (ev === "close") setTimeout(() => cb(0), 1); },
+      };
+      return child;
+    }) as unknown as SpawnFn;
+  }
+
+  it("kills each surviving essaim-security-<runId> container and returns the count", async () => {
+    const calls: string[][] = [];
+    const n = await sweepOrphanContainers("run-1", { spawnFn: spawnFor("abc123\n", calls) });
+    expect(n).toBe(1);
+    expect(calls[0]).toEqual(expect.arrayContaining(["ps", "-q"]));
+    expect(calls.some((a) => a[0] === "kill" && a.includes("abc123"))).toBe(true);
+  });
+
+  it("returns 0 when nothing is running (no kill)", async () => {
+    const calls: string[][] = [];
+    const n = await sweepOrphanContainers("run-1", { spawnFn: spawnFor("\n", calls) });
+    expect(n).toBe(0);
+    expect(calls.some((a) => a[0] === "kill")).toBe(false);
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run tests/unit/security-killswitch.test.ts`
+Expected: FAIL — cannot resolve `../../src/security/killswitch.js`.
+
+- [ ] **Step 3: Write the implementation (`src/security/killswitch.ts`)**
+
+```ts
+// src/security/killswitch.ts — operator halt + orphan-container teardown (safety).
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { spawnCaptured, type SpawnFn } from "./adapters/base.js";
+import { createLogger } from "../logger.js";
+
+const log = createLogger("security");
+
+/** Operator kill-switch: a reports/security/STOP file or ESSAIM_SECURITY_HALT=1. */
+export function isHaltRequested(projectPath: string): boolean {
+  if (process.env.ESSAIM_SECURITY_HALT === "1") return true;
+  return existsSync(join(projectPath, "reports", "security", "STOP"));
+}
+
+/** Kill any container still named essaim-security-<runId>. Returns how many were killed. */
+export async function sweepOrphanContainers(runId: string, opts: { spawnFn?: SpawnFn } = {}): Promise<number> {
+  const filter = `name=essaim-security-${runId}`;
+  const ps = await spawnCaptured("docker", ["ps", "-q", "--filter", filter], { spawnFn: opts.spawnFn }).catch(() => ({
+    code: 1, stdout: "", stderr: "", timedOut: false,
+  }));
+  const ids = ps.stdout.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+  let killed = 0;
+  for (const id of ids) {
+    const r = await spawnCaptured("docker", ["kill", id], { spawnFn: opts.spawnFn }).catch(() => ({ code: 1 } as { code: number }));
+    if (r.code === 0) {
+      killed++;
+      log.warn(`security: swept orphan container ${id} (run ${runId})`);
+    }
+  }
+  return killed;
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `npx vitest run tests/unit/security-killswitch.test.ts`
+Expected: PASS. (Wiring: Plan 3's `runSecurityPrePhase` calls `isHaltRequested` before scanning and `sweepOrphanContainers` in a `finally`.)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/security/killswitch.ts tests/unit/security-killswitch.test.ts
+git commit -m "feat(security): operator kill-switch + orphan-container sweep"
+```
+
+---
+
 ## Self-Review
 
 **1. Spec coverage (spec §4 engine layer, §4.5 license gate, §4.3/§4.4 Strix, §13 pinning):**
 - §4.1 file layout: `docker.ts`, `adapters/base.ts`, `registry.ts`, `adapters/strix.ts` (+ `strix-parse.ts` split out for testability), `scan.ts` → Tasks 1–6. ✅
 - §4.2 `EngineAdapter`/`EngineCapabilities`/`AdapterRegistry` interfaces (from Plan 1 `types.ts`) implemented → Tasks 3, 5. ✅
-- §4.3 failure handling (never reject; status rides result; timeout→docker kill; **zero-from-nonempty→error**; version/parse guard) → Task 5. ✅
+- §4.3 failure handling (never reject; status rides result; timeout→**docker kill (tested)**; **zero-from-nonempty→error**; report-shape parse guard) → Task 5. ✅ (Strict version-range gate deferred to a real-version capture — spec §16.)
+- §4.4 healthCheck now also runs `docker image inspect` so a missing pinned image yields a clear `ok:false` → engine `skipped` (Task 5). ✅
+- §9.3 kill-switch + orphan-container sweep → Task 7. ✅ (`scanMode` from config wired end-to-end via `ResolvedScope.scanMode`, closing the "deep is dead config" gap.)
 - §4.4 StrixAdapter: `docker run` only, read-only mount, native diff scope, secrets via env-file, redacted excerpt → Tasks 1, 5. ✅
 - §4.5 registry **license gate** (permissive set; AGPL refused) → Task 3. ✅
 - §13 image pinned by digest (`PINNED_STRIX_IMAGE`, placeholder digest flagged) → Task 1 + spike note in Task 4. ✅

@@ -39,7 +39,7 @@ _(Copied verbatim from the design spec `docs/superpowers/specs/2026-07-22-essaim
 **Interfaces:**
 - Consumes: nothing (foundation).
 - Produces:
-  - `types.ts`: `EngineId` (`"strix"`), `Severity`, `SubjectSeverity`, `FindingStatus`, `Finding`, `EngineStatus`, `EngineError`, `EngineRunResult`, `EngineCapabilities`, `ResolvedScope`, `SecurityScopeConfig`, `SecurityAuthorizationConfig`, `SecurityConfig`, `BaselineEntry`, `BaselineFile`, `AuthorizationResult`.
+  - `types.ts`: `EngineId` (`"strix"`), `Severity`, `SubjectSeverity`, `FindingStatus`, `Finding`, `EngineStatus`, `EngineError`, `EngineRunResult`, `EngineCapabilities`, `ResolvedScope`, **`EngineAdapter`**, **`AdapterRegistry`**, `SecurityScopeConfig`, `SecurityAuthorizationConfig`, `SecurityConfig`, `BaselineEntry`, `BaselineFile`, `AuthorizationResult`. (`EngineAdapter`/`AdapterRegistry` are the canonical engine contract consumed by Plan 2's `registry.ts`/`strix.ts`/`scan.ts` and Plan 3's `verify.ts`/`pre-phase.ts` — they MUST live here.)
   - `errors.ts`: `SecurityConfigError`, `SecurityAuthorizationError`, `EngineLicenseError` (all `extends Error`).
   - `finding.ts`: `normPath(p: string): string`, `fingerprint(f: Pick<Finding,"engine"|"ruleId"|"file"|"category">): string`, `toSubjectSeverity(sev: Severity): SubjectSeverity`.
 
@@ -65,9 +65,11 @@ describe("fingerprint", () => {
     expect(fingerprint(base)).toBe(fingerprint({ ...base }));
   });
 
-  it("is LINE-insensitive (no line number in the key)", () => {
-    // Same finding conceptually, different lines → must collide.
-    expect(fingerprint(base)).toBe(fingerprint({ ...base }));
+  it("is LINE-insensitive (two findings differing ONLY by line collide)", () => {
+    // fingerprint()'s input has no `line` field, so the same vuln at different lines must collide.
+    const atLine10 = { ...base, line: 10 };
+    const atLine999 = { ...base, line: 999 };
+    expect(fingerprint(atLine10)).toBe(fingerprint(atLine999));
   });
 
   it("is path-separator insensitive (\\ vs /)", () => {
@@ -181,8 +183,23 @@ export interface EngineCapabilities {
 export interface ResolvedScope {
   targetPath: string; // repo path (Docker mount source)
   mode: "diff" | "full";
+  scanMode: "quick" | "deep"; // from SecurityConfig.scan_mode — wired into the engine's --scan-mode
   diffBase?: string; // resolved ref for Strix --diff-base
   excludeMatchers: RegExp[]; // compiled from SecurityConfig.scope.exclude_paths
+}
+
+// ---- The pluggable engine contract (adapters implement this; the registry holds them) ----
+
+export interface EngineAdapter {
+  readonly capabilities: EngineCapabilities;
+  healthCheck(): Promise<{ ok: boolean; detail: string; version?: string }>;
+  run(scope: ResolvedScope, signal: AbortSignal): Promise<EngineRunResult>;
+}
+
+export interface AdapterRegistry {
+  register(a: EngineAdapter): void; // THROWS (EngineLicenseError) if capabilities.license ∉ permissive allowlist
+  get(id: EngineId): EngineAdapter | undefined;
+  resolve(ids: EngineId[]): EngineAdapter[]; // throws on an unknown/unregistered id
 }
 
 // ---- Config (loaded from .essaim/security.yaml; see config.ts) ----
@@ -573,6 +590,7 @@ export function resolveScope(cfg: SecurityConfig, ctx: { repoPath: string; baseS
   return {
     targetPath: ctx.repoPath,
     mode,
+    scanMode: cfg.scan_mode,
     diffBase,
     excludeMatchers: cfg.scope.exclude_paths.map(globToRegExp),
   };

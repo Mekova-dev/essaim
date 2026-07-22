@@ -148,6 +148,8 @@ export function removeEnvFile(path: string | undefined): void {
 }
 ```
 
+> **Windows note (decision #6 — primary target):** `writeFileSync(..., { mode: 0o600 })` is a **no-op on Windows** (NTFS ACLs ignore POSIX mode). The env-file lives under the per-user `os.tmpdir()` (already user-scoped) and is unlinked in `finally`, so the exposure window is short. This is documented as **POSIX-enforced / Windows-best-effort**; the `platform() !== "win32"` guard in the test above reflects it. A hardened Windows ACL (`icacls <file> /inheritance:r /grant:r "%USERNAME%:F"`) is a v2 follow-up, not a v1 blocker.
+
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/unit/security-secrets.test.ts`
@@ -468,7 +470,7 @@ git commit -m "feat(security): coordinator ingest via /api/announce + redaction 
 - Produces:
   - `VerifyItem` = `{ finding: Finding; worktreePath: string; threadId: string; engineId: EngineId }`
   - `VerifyResult` = `{ threadId: string; fingerprint: string; status: "verified" | "reopened" }`
-  - `verifyFixes(registry: AdapterRegistry, items: VerifyItem[], signal: AbortSignal): Promise<VerifyResult[]>`
+  - `verifyFixes(registry: AdapterRegistry, items: VerifyItem[], signal: AbortSignal, deps?: { existsFn?: (p: string) => boolean }): Promise<VerifyResult[]>` (a missing worktree → `reopened`, conservative)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -502,11 +504,13 @@ function rescanAdapter(returnFingerprints: string[]): EngineAdapter {
 }
 
 describe("verifyFixes", () => {
+  const existsTrue = { existsFn: () => true };
+
   it("marks a finding VERIFIED when the re-scan no longer detects its fingerprint", async () => {
     const reg = createRegistry();
     reg.register(rescanAdapter([])); // clean re-scan
     const items: VerifyItem[] = [{ finding: finding("fp1"), worktreePath: "/wt/a", threadId: "t-1", engineId: "strix" }];
-    const res = await verifyFixes(reg, items, new AbortController().signal);
+    const res = await verifyFixes(reg, items, new AbortController().signal, existsTrue);
     expect(res).toEqual([{ threadId: "t-1", fingerprint: "fp1", status: "verified" }]);
   });
 
@@ -514,7 +518,15 @@ describe("verifyFixes", () => {
     const reg = createRegistry();
     reg.register(rescanAdapter(["fp1"])); // still there
     const items: VerifyItem[] = [{ finding: finding("fp1"), worktreePath: "/wt/a", threadId: "t-1", engineId: "strix" }];
-    const res = await verifyFixes(reg, items, new AbortController().signal);
+    const res = await verifyFixes(reg, items, new AbortController().signal, existsTrue);
+    expect(res[0].status).toBe("reopened");
+  });
+
+  it("marks REOPENED (conservative) when the worktree is gone (e.g. --cleanup)", async () => {
+    const reg = createRegistry();
+    reg.register(rescanAdapter([])); // even a clean adapter cannot save a missing worktree
+    const items: VerifyItem[] = [{ finding: finding("fp1"), worktreePath: "/gone", threadId: "t-1", engineId: "strix" }];
+    const res = await verifyFixes(reg, items, new AbortController().signal, { existsFn: () => false });
     expect(res[0].status).toBe("reopened");
   });
 });
@@ -529,8 +541,12 @@ Expected: FAIL — cannot resolve `../../src/security/verify.js`.
 
 ```ts
 // src/security/verify.ts — deterministic re-scan of fixed worktrees. REPORT-ONLY in v1:
-// records verified/reopened; does NOT mutate the coordinator (the vendored coordinator has no
-// reopen endpoint — a real reopen lands with the v2 coordinator change).
+// records verified/reopened; does NOT mutate the coordinator. (Corrected justification: an
+// /api/unclaim-task endpoint EXISTS, but it cannot reopen these threads — by the time verify runs
+// the thread is already `resolving`/resolved and the caller is the synthetic author, not the
+// claimer, so the unclaim SQL (`WHERE status='open' AND claimed_by=?`) matches nothing. A real
+// reopen needs a coordinator change and is DEFERRED to v2 — spec §7.3/§14.)
+import { existsSync } from "node:fs";
 import type { AdapterRegistry, EngineId, Finding, ResolvedScope } from "./types.js";
 import { runSecurityScan } from "./scan.js";
 
@@ -551,10 +567,17 @@ export async function verifyFixes(
   registry: AdapterRegistry,
   items: VerifyItem[],
   signal: AbortSignal,
+  deps: { existsFn?: (p: string) => boolean } = {},
 ): Promise<VerifyResult[]> {
+  const exists = deps.existsFn ?? existsSync;
   const out: VerifyResult[] = [];
   for (const it of items) {
-    const scope: ResolvedScope = { targetPath: it.worktreePath, mode: "full", excludeMatchers: [] };
+    // Conservative: if the worktree is gone (e.g. --cleanup removed it) we cannot prove closure → reopened.
+    if (!exists(it.worktreePath)) {
+      out.push({ threadId: it.threadId, fingerprint: it.finding.fingerprint, status: "reopened" });
+      continue;
+    }
+    const scope: ResolvedScope = { targetPath: it.worktreePath, mode: "full", scanMode: "quick", excludeMatchers: [] };
     const scan = await runSecurityScan(registry, [it.engineId], scope, signal);
     const stillThere = scan.findings.some((f) => f.fingerprint === it.finding.fingerprint);
     out.push({ threadId: it.threadId, fingerprint: it.finding.fingerprint, status: stillThere ? "reopened" : "verified" });
@@ -586,7 +609,7 @@ git commit -m "feat(security): report-only fix-verification re-scan"
 **Interfaces:**
 - Consumes: everything from Plans 1–2 + Tasks 1/3/4 above; `execSync` from `node:child_process` (via injectable `diffFn`).
 - Produces:
-  - `runSecurityPrePhase(params: PrePhaseParams, deps?: { registry?: AdapterRegistry }): Promise<PrePhaseResult>`
+  - `runSecurityPrePhase(params: PrePhaseParams, deps?: { registry?: AdapterRegistry; halt?: () => boolean; sweep?: () => Promise<unknown> }): Promise<PrePhaseResult>` (halt-checks, sweeps orphan containers in `finally`, asserts coordinator-pool purity before seeding, writes a redacted audit report)
     - `PrePhaseParams` = `{ coordinatorUrl: string; runId: string; projectPath: string; baseSha?: string; security: MiniProjectSecurity }`
     - `PrePhaseResult` = `{ ledger: SecurityRunLedger; postedMap: { threadId: string; finding: Finding }[]; engineId: EngineId }`
   - `buildVerifyItems(params: { postedMap; workspacePaths: Map<string, string>; baseSha?: string; engineId: EngineId }, deps?: { diffFn?: (worktree: string, base: string) => string[] }): VerifyItem[]`
@@ -634,6 +657,7 @@ describe("runSecurityPrePhase", () => {
     const dir = mkdtempSync(join(tmpdir(), "prephase-"));
     const mockFetch = vi.fn().mockImplementation(async (url: string) => {
       if (url.includes("/api/register")) return { ok: true, json: async () => ({}) };
+      if (url.includes("/api/threads-active")) return { ok: true, json: async () => [] }; // pool clean
       return { ok: true, json: async () => ({ thread_id: "t-1", status: "open" }) };
     });
     vi.stubGlobal("fetch", mockFetch);
@@ -643,7 +667,7 @@ describe("runSecurityPrePhase", () => {
     };
     const res = await runSecurityPrePhase(
       { coordinatorUrl: "http://c", runId: "run-1", projectPath: dir, baseSha: "abc", security },
-      { registry: fakeRegistry([finding("fp1")]) },
+      { registry: fakeRegistry([finding("fp1")]), halt: () => false, sweep: async () => undefined },
     );
 
     expect(res.ledger.engine).toBe("strix");
@@ -699,6 +723,8 @@ Expected: FAIL — cannot resolve `../../src/security/pre-phase.js`.
 ```ts
 // src/security/pre-phase.ts — orchestration glue that the orchestrator calls (steps 3.5 + 6).
 import { execSync } from "node:child_process";
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type {
   AdapterRegistry, EngineId, Finding, MiniProjectSecurity, SecurityRunLedger, Severity,
 } from "./types.js";
@@ -709,7 +735,9 @@ import { resolveEngineSecrets, writeEnvFile, removeEnvFile } from "./secrets.js"
 import { createDefaultRegistry, runSecurityScan, type ScanResult } from "./scan.js";
 import { registerSyntheticAuthor, ingestFindings, syntheticAuthorId } from "./ingest.js";
 import { verifyFixes, type VerifyItem, type VerifyResult } from "./verify.js";
+import { isHaltRequested, sweepOrphanContainers } from "./killswitch.js";
 import { normPath } from "./finding.js";
+import { authHeaders } from "../coordinator-auth.js";
 import { createLogger } from "../logger.js";
 
 const log = createLogger("security");
@@ -753,21 +781,63 @@ export function buildLedger(
   };
 }
 
-/** Step 3.5: authorize → scan → scope-filter → baseline → ingest. */
-export async function runSecurityPrePhase(p: PrePhaseParams, deps: { registry?: AdapterRegistry } = {}): Promise<PrePhaseResult> {
+/** Assert the coordinator pool contains no foreign threads (belt-and-suspenders on top of reset-before-seed). */
+async function assertPoolClean(coordinatorUrl: string, authorId: string): Promise<void> {
+  const resp = await fetch(`${coordinatorUrl}/api/threads-active`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: "{}",
+  }).catch(() => null);
+  if (!resp || !resp.ok) return; // best-effort; a fresh in-process coordinator is empty anyway
+  const threads = (await resp.json()) as Array<{ initiator_id?: string }>;
+  const foreign = threads.filter((t) => t.initiator_id && t.initiator_id !== authorId);
+  if (foreign.length > 0) {
+    throw new Error(
+      `security: coordinator pool is not clean — ${foreign.length} foreign thread(s) present. A v1 security ` +
+        `run requires a fresh/reset essaim-managed coordinator (decision #3). Refusing to seed into a shared pool.`,
+    );
+  }
+}
+
+/** Best-effort redacted audit report. Refuses (skips) if reports/security/ is not gitignored (§9.7). */
+function writeEngineReport(projectPath: string, runId: string, scan: ScanResult): void {
+  const gi = existsSync(join(projectPath, ".gitignore")) ? readFileSync(join(projectPath, ".gitignore"), "utf8") : "";
+  if (!gi.includes("reports/security/")) {
+    log.warn("security: reports/security/ is not gitignored — skipping report write (run `essaim init --security`)");
+    return;
+  }
+  const dir = join(projectPath, "reports", "security");
+  mkdirSync(dir, { recursive: true });
+  for (const r of scan.results) {
+    writeFileSync(join(dir, `${r.engine}-${runId}.txt`), r.stdoutExcerpt ?? "", "utf8");
+  }
+}
+
+/** Step 3.5: halt-check → authorize → scan → scope-filter → baseline → purity-check → ingest. */
+export async function runSecurityPrePhase(
+  p: PrePhaseParams,
+  deps: { registry?: AdapterRegistry; halt?: () => boolean; sweep?: () => Promise<unknown> } = {},
+): Promise<PrePhaseResult> {
   const cfg = p.security.config;
+  const halt = deps.halt ?? (() => isHaltRequested(p.projectPath));
+  if (halt()) {
+    throw new Error("security: halt requested (reports/security/STOP or ESSAIM_SECURITY_HALT=1) — aborting before scan");
+  }
+
   const scope = resolveScope(cfg, { repoPath: p.projectPath, baseSha: p.baseSha });
   assertAuthorizedRun(cfg, { resolvedDiffBase: scope.diffBase, envAffirmed: p.security.envAffirmed });
 
   const secrets = resolveEngineSecrets(p.security.secretsFile);
   const envFile = writeEnvFile(secrets);
   const registry = deps.registry ?? createDefaultRegistry({ runId: p.runId, envFile });
+  const sweep = deps.sweep ?? (() => sweepOrphanContainers(p.runId));
 
   let scan: ScanResult;
   try {
     scan = await runSecurityScan(registry, cfg.engines, scope, AbortSignal.timeout(cfg.scanTimeoutMs));
   } finally {
     removeEnvFile(envFile);
+    await sweep().catch(() => undefined); // teardown any orphan container
   }
 
   const inScope = dropOutOfScope(scan.findings, scope);
@@ -778,7 +848,9 @@ export async function runSecurityPrePhase(p: PrePhaseParams, deps: { registry?: 
 
   const authorId = syntheticAuthorId(p.projectPath);
   await registerSyntheticAuthor(p.coordinatorUrl, authorId);
+  await assertPoolClean(p.coordinatorUrl, authorId);
   const ingest = await ingestFindings(p.coordinatorUrl, authorId, fresh.fresh);
+  writeEngineReport(p.projectPath, p.runId, scan);
 
   const ledger = buildLedger(scan, { ingested: ingest.posted.length, outOfScopeDropped: inScope.dropped, suppressed: fresh.suppressed });
   return { ledger, postedMap: ingest.posted, engineId: cfg.engines[0] };
@@ -879,6 +951,8 @@ describe("buildChildEnv — allowlist (drops engine secrets)", () => {
     COORDINATOR_URL: "http://localhost:3100",
     ESSAIM_RUN_ID: "run-1",
     DEBUG: "1",
+    HTTPS_PROXY: "http://proxy:8080",
+    ProgramFiles: "C:\\Program Files",
     // must be DROPPED:
     LLM_API_KEY: "sk-engine-secret",
     STRIX_LLM: "anthropic/claude",
@@ -897,6 +971,8 @@ describe("buildChildEnv — allowlist (drops engine secrets)", () => {
     expect(env.COORDINATOR_URL).toBe("http://localhost:3100");
     expect(env.ESSAIM_RUN_ID).toBe("run-1");
     expect(env.DEBUG).toBe("1");
+    expect(env.HTTPS_PROXY).toBe("http://proxy:8080"); // proxy passes (corp networks)
+    expect(env.ProgramFiles).toBe("C:\\Program Files"); // Windows essential passes
   });
 
   it("DROPS engine secrets and arbitrary *_API_KEY / *_TOKEN", () => {
@@ -932,9 +1008,12 @@ Expected: FAIL — cannot resolve `../../src/agent-loop/child-env.js`.
 const ALLOW_EXACT = new Set([
   "PATH", "Path", "PATHEXT",
   "HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "TEMP", "TMP", "TMPDIR",
-  "SYSTEMROOT", "WINDIR", "COMSPEC", "NUMBER_OF_PROCESSORS", "PROCESSOR_ARCHITECTURE",
+  "SYSTEMROOT", "SystemDrive", "WINDIR", "COMSPEC", "NUMBER_OF_PROCESSORS", "PROCESSOR_ARCHITECTURE",
+  "ProgramFiles", "ProgramFiles(x86)", "ProgramW6432", "ProgramData", "CommonProgramFiles",
   "LANG", "LC_ALL", "SHELL", "TERM", "USER", "USERNAME", "LOGNAME",
   "DEBUG", "LOG_LEVEL", "NODE_ENV",
+  // Proxy config — the claude child may need it to reach the Anthropic API on corp networks.
+  "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy",
 ]);
 
 // Prefix families that belong to claude / anthropic / essaim / the coordinator (not engines).
@@ -1008,13 +1087,21 @@ import { runSecurityPrePhase, runSecurityVerifyPhase } from "../security/pre-pha
   let securityLedger: import("../security/types.js").SecurityRunLedger | undefined;
   let securityPosted: { threadId: string; finding: import("../security/types.js").Finding }[] = [];
   let securityEngineId: import("../security/types.js").EngineId | undefined;
+  let securityBaseSha: string | undefined;
   if (project.security && mode === "with_coordinator") {
     log.info("Security pre-phase: scanning + seeding coordinator...");
+    // REQUIRED: resolve the base commit NOW (before createWorkspaces). With default config
+    // (scope.mode=diff, diff_base=""), resolveScope needs a base or it throws — so compute it here.
+    try {
+      securityBaseSha = execSync(`git rev-parse ${project.workspace.baseRef || "HEAD"}`, { cwd: basePath, encoding: "utf-8" }).trim();
+    } catch {
+      securityBaseSha = undefined; // non-git repo: diff-scope will refuse loudly in resolveScope
+    }
     const pre = await runSecurityPrePhase({
       coordinatorUrl: effectiveCoordinatorUrl,
       runId,
       projectPath: basePath,
-      baseSha: undefined, // resolved below from workspace.baseSha for verify; scan uses config diff_base
+      baseSha: securityBaseSha,
       security: project.security,
     });
     securityLedger = pre.ledger;
@@ -1026,9 +1113,11 @@ import { runSecurityPrePhase, runSecurityVerifyPhase } from "../security/pre-pha
   }
 ```
 
-> Note on `baseSha`: the scan's diff base comes from `project.security.config.scope.diff_base` (resolved in `resolveScope`); it does not need the worktree `baseSha`. The verify step (below) uses `workspace.baseSha`. If you want the scan to also fall back to the worktree baseSha, compute it before `createWorkspaces` via `execSync("git rev-parse " + (project.workspace.baseRef || "HEAD"))` and pass it as `baseSha`.
+> **Fix (was P0#3):** `baseSha` is now computed here via `git rev-parse` (essaim already imports `execSync`; see the setup-script step) and passed into the pre-phase, so a default-config run (`scope.mode=diff`, `diff_base=""`) resolves its base instead of throwing in `resolveScope`. On a non-git repo `resolveScope` still refuses loudly (correct — diff scope is impossible). Add a regression test asserting a default-config run reaches `runSecurityScan` (mock the registry).
 
-- [ ] **Step 3: Insert step 6 (after the swarm wait / `log.info("Done in …")` near line 400, before the `return` at 460)**
+- [ ] **Step 3: Insert step 6 — strictly AFTER the swarm wait (`log.info("Done in …")`, ~line 400) and BEFORE the `// 7. Cleanup/keep worktrees` block (~line 435)**
+
+> **Fix (was P1):** verify MUST run before the `--cleanup` block removes the worktrees, otherwise it re-scans deleted paths. Pin the insertion between line 400 and line 435. (`runSecurityVerifyPhase` is also hardened: a missing worktree → `reopened`, see Task 4.)
 
 ```ts
   // 6. Security verify phase (deterministic, report-only): re-scan fixed worktrees.
@@ -1119,7 +1208,7 @@ describe("writeReport — security section", () => {
       },
     });
     const md = readFileSync(writeReport([result], dir), "utf8");
-    expect(md).toContain("## Moteur de sécurité");
+    expect(md).toContain("### Moteur de sécurité"); // nested under the project block
     expect(md).toContain("strix");
     expect(md).toContain("Apache-2.0");
     expect(md).toContain("2 verified");
@@ -1130,7 +1219,7 @@ describe("writeReport — security section", () => {
   it("omits the section entirely for a non-security run", () => {
     dir = mkdtempSync(join(tmpdir(), "rep-"));
     const md = readFileSync(writeReport([baseResult()], dir), "utf8");
-    expect(md).not.toContain("## Moteur de sécurité");
+    expect(md).not.toContain("Moteur de sécurité");
   });
 });
 ```
@@ -1178,7 +1267,11 @@ git commit -m "feat(security): reporter 'Moteur de sécurité' section (gated on
 - §5 coordinator ingest via existing `/api/announce` + synthetic author `/api/register`; redaction chokepoint inside `findingToAnnounce` → Task 3. ✅
 - §5.3 reset-before-seed rationale: the orchestrator already resets (grounded) and v1 uses the essaim-managed coordinator; `requireFindings` abort before worktrees → Task 7. ✅ (External-coordinator rejection is enforced in the CLI, Plan 4.)
 - §7.1 insertion points (3.5 before createWorkspaces; 6 after swarm before return) → Task 7, grounded to real line numbers. ✅
-- §7.3 verify re-scan → verified/reopened; **report-only** (corrected: no coordinator reopen endpoint exists); reopen blocks "clean" but not the run (decision #5) → Tasks 4, 5, 8. ✅
+- §7.3 verify re-scan → verified/reopened; **report-only** (corrected justification: `/api/unclaim-task` exists but can't reopen a `resolving`/resolved thread posted by the synthetic author — real reopen is DEFERRED to v2) → Tasks 4, 5, 8. ✅
+- §9.3 kill-switch (`isHaltRequested`) + orphan-container sweep (`sweepOrphanContainers`, wired into the pre-phase `finally`) → Plan 2 Task 7 + Task 5 wiring. ✅
+- §9.7 redacted audit report written only when `reports/security/` is gitignored (else skipped) → Task 5 `writeEngineReport`. ✅
+- §5.3 pre-swarm coordinator-purity assertion (`assertPoolClean`: `threads-active` must contain only our author) → Task 5. ✅
+- **Deferred to v2 (explicit):** thread reopen on re-detection (needs a coordinator change); functional-regression pass/fail *reporting* (the `security-fix` behavior still runs the project tests, but v1 does not deterministically capture/report the result) — recorded in spec §14.
 - §9.1 secret env-file + **claude-stream env allowlist** (the load-bearing edit) + env-scrub test → Tasks 1, 6. ✅
 - §12 reporter section (engine, license, digest, 5-level severity, verify status) → Task 8. ✅
 - Types: `MiniProject.security` / `RunResult.security` → Task 2. ✅

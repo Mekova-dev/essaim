@@ -605,7 +605,7 @@ A new engine returns `EngineRunResult` (duration always set) and inherits report
 Strix is the **only** engine with a verified deterministic contract: Apache-2.0 (permissive), lightest infra (Docker + CLI, no Postgres/Neo4j/ClickHouse), native `--scope-mode diff --diff-base` that maps exactly onto essaim's worktree baseline, and a clean exit-code contract (0/1/2). HexStrike's REST surface and PentAGI's dispatch shape are both **unverified/assumed** — building them now is speculative work against moving targets.
 
 **v1 ships:**
-`src/security/{types,finding,scope,authorization,baseline,redact,registry,scan,ingest,verify,config,docker}.ts` + `adapters/{base,strix}.ts`; the `sentinelle` + `sentinelle-triage` presets and `security-fix` + `security-untrusted-findings` behaviors; the orchestrator pre-phase (3.5) + verify (6) + report section; the **`claude-stream.ts` env-allowlist edit** (load-bearing); the `cli/security.ts` thin command + `init --security` gitignore/scaffold; the focused test set (§11).
+`src/security/{types,finding,scope,authorization,baseline,redact,registry,scan,ingest,verify,config,docker,secrets,killswitch,setup}.ts` + `adapters/{base,strix,strix-parse}.ts` + `src/agent-loop/child-env.ts`; the `sentinelle` **preset + `templates/sentinelle.yaml`** (`--triage-only` = zero-agent run, no separate preset) and `security-fix` + `security-untrusted-findings` behaviors; the orchestrator pre-phase (3.5) + verify (6) + report section; the **`claude-stream.ts` env-allowlist edit** (load-bearing); the `cli/security.ts` thin command + `init --security` gitignore/scaffold; the focused test set (§11). See §17 errata.
 
 **v1 explicitly OUT (YAGNI):** HexStrike, PentAGI, cross-engine dedup (`mergeFindings`, `metadata` column, `json_extract` index), the Haiku `security-recon` loader + `seededDiscoveries` core hook, `phase-review` in the security path, dynamic/DAST + exploitation + egress-allowlist/metadata-blocking, essaim-built SandboxSpec, two-ledger cost + reserved MQTT topic + dashboard panel, the 20-flag command + profiles, HexStrike `.mcp.json` injection, JSON-in-plan round-trip (`parseFindingFromPlan`/`Task.finding`), SARIF export, cross-run trend UI, multi-target engagements.
 
@@ -636,3 +636,17 @@ These are implementation-plan concerns, not design blockers:
 - Exact pinned `usestrix/strix@sha256:<digest>` to scaffold (must be captured + license-verified at build time).
 - The precise `claude-stream.ts` env allowlist keys (enumerate every var essaim's agents legitimately need).
 - Strix stdout format capture for fixtures (requires one real run by a maintainer to author `tests/fixtures/security/*`).
+
+---
+
+## 17. Errata (post-plan review corrections — 2026-07-22)
+
+An adversarial cross-review of the 4 implementation plans confirmed 36 issues; the plans were corrected. Where a plan and this spec disagree, **the plans are authoritative**. Corrections to this document's body:
+
+- **§5.1/§5.2/§7.2 — ingest signatures.** The frozen `ingestFindings(..., runId)` / `findingToAnnounce(f, agentId, runId)` / `cfg.authorAgentId` are superseded. Actual v1: `ingestFindings(url, agentId, findings)`, `findingToAnnounce(f, agentId)`, and the author id comes from `syntheticAuthorId(projectPath)` (`security-scanner@<basename>`). **`run_id` is NOT sent** — the vendored coordinator ignores it (confirmed). Run isolation relies on reset-before-seed + a pre-seed pool-purity assertion (`assertPoolClean`).
+- **§6.1 — preset param name.** The param is **`execute_mission`** (not `fix_mission`); `security-fix` mirrors `phase-execute`. There is **no `sentinelle-triage` preset** — `--triage-only` is a zero-agent run of the `sentinelle` template. A `templates/sentinelle.yaml` (separate from `presets/sentinelle.yaml`) is required.
+- **§7.3 — reopen justification.** Report-only verify stands, but the reason is corrected: `/api/unclaim-task` exists yet **cannot** reopen a `resolving`/resolved thread posted by the synthetic author. Real thread-reopen is **DEFERRED to v2** (needs a coordinator change). **Functional-regression pass/fail reporting is also v2** — the `security-fix` behavior runs the project tests, but v1 does not deterministically capture/report the result.
+- **§12.1 — reporter heading** is `### Moteur de sécurité` (nested under the per-project block), not `##`.
+- **§9.x — implemented in v1 (were at risk of being dropped):** operator kill-switch (`reports/security/STOP` / `ESSAIM_SECURITY_HALT`), orphan-container `docker kill` sweep, `docker image inspect` in `healthCheck`, redacted audit-report write gated on gitignore, committed-`affirmed:true` footgun requiring `--authorize`, and `scan_mode: deep` wired end-to-end via `ResolvedScope.scanMode`.
+- **§9.1 — `0600` env-file** is POSIX-enforced / Windows-best-effort (NTFS ignores POSIX mode; the file is user-scoped under `os.tmpdir()` and unlinked in `finally`; hardened ACL is v2).
+- **`EngineAdapter` / `AdapterRegistry`** are declared in `src/security/types.ts` (the canonical schema owner), consumed by the engine layer.
