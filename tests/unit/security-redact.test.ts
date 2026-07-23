@@ -29,9 +29,11 @@ describe("redact", () => {
 });
 
 describe("sanitizeUntrusted", () => {
-  it("strips control characters but keeps newlines and tabs", () => {
-    const out = sanitizeUntrusted("a bc\td\ne");
-    expect(out).toBe("abc\td\ne");
+  it("strips control characters but keeps newlines, tabs, and spaces", () => {
+    const NUL = String.fromCharCode(0);
+    const ESC = String.fromCharCode(27);
+    const out = sanitizeUntrusted("a b" + NUL + "c" + ESC + "[31md\te\nf");
+    expect(out).toBe("a bc[31md\te\nf"); // NUL + ESC removed; space, tab, newline kept
   });
 
   it("caps length", () => {

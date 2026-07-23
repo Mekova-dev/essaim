@@ -33,10 +33,17 @@ export function redact(text: string): string {
   return out;
 }
 
-/** Strip control chars (keep \n, \t) and cap length. Does NOT fence. */
+/** Strip control chars (keep \n, \t, \r) and cap length. Does NOT fence. */
 export function sanitizeUntrusted(text: string, maxLen = 4000): string {
   if (!text) return "";
-  const cleaned = text.replace(/[ --]/g, "");
+  const cleaned = Array.from(text)
+    .filter((ch) => {
+      const c = ch.charCodeAt(0);
+      if (c === 0x09 || c === 0x0a || c === 0x0d) return true; // keep tab, newline, CR
+      if (c === 0x7f) return false;                            // drop DEL
+      return c >= 0x20;                                        // keep printable+space, drop C0 controls
+    })
+    .join("");
   return cleaned.length > maxLen ? cleaned.slice(0, maxLen) + "\n…[truncated]" : cleaned;
 }
 
