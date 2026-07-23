@@ -54,6 +54,27 @@ describe("runSecurityPrePhase", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it("REFUSES to seed when the coordinator pool-purity query fails (fail-closed)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "prephase-"));
+    const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes("/api/register")) return { ok: true, json: async () => ({}) };
+      if (url.includes("/api/threads-active")) return { ok: false, status: 500 }; // query fails
+      return { ok: true, json: async () => ({ thread_id: "t-1", status: "open" }) };
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const security: MiniProjectSecurity = {
+      config: { ...DEFAULT_SECURITY_CONFIG, authorization: { affirmed: true, authorized_by: "test" }, scope: { mode: "diff", diff_base: "HEAD~1", exclude_paths: [] } },
+    };
+    await expect(
+      runSecurityPrePhase(
+        { coordinatorUrl: "http://c", runId: "run-1", projectPath: dir, baseSha: "abc", security },
+        { registry: fakeRegistry([finding("fp1")]), halt: () => false, sweep: async () => undefined },
+      ),
+    ).rejects.toThrow();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   it("refuses (throws) when authorization is not affirmed", async () => {
     const dir = mkdtempSync(join(tmpdir(), "prephase-"));
     const security: MiniProjectSecurity = {

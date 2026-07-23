@@ -60,12 +60,24 @@ export function buildLedger(
 
 /** Assert the coordinator pool contains no foreign threads (belt-and-suspenders on top of reset-before-seed). */
 async function assertPoolClean(coordinatorUrl: string, authorId: string): Promise<void> {
-  const resp = await fetch(`${coordinatorUrl}/api/threads-active`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: "{}",
-  }).catch(() => null);
-  if (!resp || !resp.ok) return; // best-effort; a fresh in-process coordinator is empty anyway
+  let resp: Response;
+  try {
+    resp = await fetch(`${coordinatorUrl}/api/threads-active`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: "{}",
+    });
+  } catch (err) {
+    throw new Error(
+      `security: could not verify coordinator pool cleanliness (query failed: ${(err as Error).message}) — ` +
+        `refusing to seed (a v1 security run requires a reachable, essaim-managed coordinator, decision #3)`,
+    );
+  }
+  if (!resp.ok) {
+    throw new Error(
+      `security: coordinator pool-purity query returned HTTP ${resp.status} — refusing to seed (decision #3)`,
+    );
+  }
   const threads = (await resp.json()) as Array<{ initiator_id?: string }>;
   const foreign = threads.filter((t) => t.initiator_id && t.initiator_id !== authorId);
   if (foreign.length > 0) {
