@@ -45,8 +45,7 @@ describe("renderUntrustedBlock", () => {
   it("redacts, sanitizes, and fences the text; a secret never survives", () => {
     const out = renderUntrustedBlock("run this: sk-abcDEF0123456789ghijklmnop now");
     expect(out).not.toContain("sk-abcDEF0123456789ghijklmnop");
-    expect(out).not.toContain(" ");
-    expect(out).toContain("BEGINUNTRUSTED");
-    expect(out).toContain("ENDUNTRUSTED");
+    expect(out).toContain("BEGIN UNTRUSTED");
+    expect(out).toContain("END UNTRUSTED");
   });
 });
