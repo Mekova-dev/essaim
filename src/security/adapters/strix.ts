@@ -40,6 +40,15 @@ export function createStrixAdapter(deps: StrixAdapterDeps): EngineAdapter {
     capabilities: STRIX_CAPABILITIES,
 
     async healthCheck() {
+      // Refuse the placeholder digest before touching docker at all — misdirecting the operator to
+      // `docker pull` an unpinned/unverified image would be worse than a clear config error.
+      if (image.includes("PLACEHOLDER_DIGEST")) {
+        return {
+          ok: false,
+          detail:
+            "Strix image digest is not pinned (PLACEHOLDER_DIGEST) — set a real, license-verified digest in src/security/docker.ts (PINNED_STRIX_IMAGE) before running a scan.",
+        };
+      }
       // Docker backend + pinned image both present. (Real invocation happens in run().)
       const fail = (e: Error) => ({ code: 1, stdout: "", stderr: e.message, timedOut: false });
       const info = await spawnCaptured("docker", ["info"], { spawnFn: deps.spawnFn }).catch(fail);

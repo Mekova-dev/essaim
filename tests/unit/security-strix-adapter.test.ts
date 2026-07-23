@@ -35,6 +35,23 @@ describe("STRIX_CAPABILITIES", () => {
   });
 });
 
+describe("StrixAdapter.healthCheck — placeholder digest guard", () => {
+  it("refuses with a clear message when using the default (placeholder-digest) image, without spawning docker", async () => {
+    let spawnCalled = false;
+    const spawnFn: SpawnFn = ((..._args: unknown[]) => {
+      spawnCalled = true;
+      throw new Error("docker should not be spawned when the digest is a placeholder");
+    }) as unknown as SpawnFn;
+    // No `image` override → adapter uses the default PINNED_STRIX_IMAGE (still PLACEHOLDER_DIGEST).
+    const a = createStrixAdapter({ runId: "r1", spawnFn });
+    const res = await a.healthCheck();
+    expect(res.ok).toBe(false);
+    expect(res.detail).toContain("PLACEHOLDER_DIGEST");
+    expect(res.detail).toContain("PINNED_STRIX_IMAGE");
+    expect(spawnCalled).toBe(false);
+  });
+});
+
 describe("StrixAdapter.run — exit-code mapping", () => {
   it("exit 0 → no_vulns, no findings", async () => {
     const a = createStrixAdapter({ runId: "r1", spawnFn: scriptedSpawn(fx("strix-clean.stdout.txt"), 0) });

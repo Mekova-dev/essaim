@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, statSync } from "node:fs";
 import { tmpdir, platform } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { resolveEngineSecrets, writeEnvFile, removeEnvFile } from "../../src/security/secrets.js";
 
 const created: (string | undefined)[] = [];
@@ -49,5 +49,13 @@ describe("removeEnvFile", () => {
     const p = writeEnvFile({ K: "v" })!;
     removeEnvFile(p);
     expect(existsSync(p)).toBe(false);
+  });
+
+  it("also removes the per-scan parent temp dir (not just the file)", () => {
+    const p = writeEnvFile({ K: "v" })!;
+    const dir = dirname(p);
+    expect(existsSync(dir)).toBe(true);
+    removeEnvFile(p);
+    expect(existsSync(dir)).toBe(false);
   });
 });

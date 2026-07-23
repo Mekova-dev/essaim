@@ -1,8 +1,8 @@
 // src/security/secrets.ts — read engine secrets lazily; hand them to the engine container via a
 // temp 0600 env-file. NEVER placed in process.env, argv, prompts, threads, or logs.
-import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdtempSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { randomUUID } from "node:crypto";
 
 /** Parse a dotenv-style file into a map. Returns {} when no path is given or the file is absent. */
@@ -26,14 +26,17 @@ export function writeEnvFile(secrets: Record<string, string>): string | undefine
   const dir = mkdtempSync(join(tmpdir(), "essaim-sec-"));
   const path = join(dir, `${randomUUID()}.env`);
   const body = keys.map((k) => `${k}=${secrets[k]}`).join("\n") + "\n";
+  // mode 0o600 is POSIX-enforced (owner read/write only); on Windows (NTFS) this is a no-op —
+  // the file inherits NTFS ACLs instead, so don't over-claim the guarantee cross-platform.
   writeFileSync(path, body, { mode: 0o600 });
   return path;
 }
 
+/** Remove the per-scan temp env-file AND its unique parent dir (created by mkdtempSync in writeEnvFile). */
 export function removeEnvFile(path: string | undefined): void {
   if (path && existsSync(path)) {
     try {
-      unlinkSync(path);
+      rmSync(dirname(path), { recursive: true, force: true });
     } catch {
       /* best-effort */
     }
