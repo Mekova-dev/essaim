@@ -15,6 +15,7 @@ export interface AnnouncePayload {
   plan: string;
   target_files: string[];
   target_modules: string[];
+  target_symbols: string[];
   keep_open: true;
 }
 
@@ -23,12 +24,28 @@ export interface IngestResult {
   failed: number;
 }
 
+/** Sanitize an engine-derived metadata field (file path, category, cwe, ...) — untrusted, not fenced. */
+function safeMeta(value: unknown, maxLen: number): string {
+  return sanitizeUntrusted(String(value ?? ""), maxLen);
+}
+
+/** Sanitize + format an engine-derived file:line location. `line` is coerced defensively. */
+function safeLocation(f: Finding): string {
+  if (!f.file) return "";
+  const file = safeMeta(f.file, 200);
+  const line = typeof f.line === "number" && Number.isFinite(f.line) ? `:${f.line}` : "";
+  return `${file}${line}`;
+}
+
 /** Redacted + sanitized context for the fixer. Raw PoC never included — only a fenced summary + fingerprint. */
 export function renderPlan(f: Finding): string {
+  const safeCwe = f.cwe ? safeMeta(f.cwe, 40) : "";
+  const safeCategory = safeMeta(f.category, 80);
+  const loc = safeLocation(f);
   const lines = [
-    `Severity: ${f.severity}${f.cwe ? ` (${f.cwe})` : ""}`,
-    `Category: ${f.category}`,
-    f.file ? `Location: ${f.file}${f.line ? `:${f.line}` : ""}` : "",
+    `Severity: ${f.severity}${safeCwe ? ` (${safeCwe})` : ""}`,
+    `Category: ${safeCategory}`,
+    loc ? `Location: ${loc}` : "",
     "",
     "Description:",
     renderUntrustedBlock(f.description),
@@ -41,15 +58,16 @@ export function renderPlan(f: Finding): string {
 }
 
 export function findingToAnnounce(f: Finding, agentId: string): AnnouncePayload {
-  const loc = f.file ? ` (${f.file}${f.line ? `:${f.line}` : ""})` : "";
+  const loc = safeLocation(f);
   const safeTitle = sanitizeUntrusted(redact(f.title), 160);
-  const subject = `${toSubjectSeverity(f.severity)}: ${safeTitle}${loc}`.slice(0, 200);
+  const subject = `${toSubjectSeverity(f.severity)}: ${safeTitle}${loc ? ` (${loc})` : ""}`.slice(0, 200);
   return {
     agent_id: agentId,
     subject,
     plan: renderPlan(f),
-    target_files: f.file ? [f.file] : [],
+    target_files: f.file ? [safeMeta(f.file, 400)] : [],
     target_modules: [],
+    target_symbols: f.symbol ? [safeMeta(f.symbol, 200)] : [],
     keep_open: true,
   };
 }
