@@ -4,14 +4,37 @@ import { SecurityConfigError } from "./errors.js";
 import { normPath } from "./finding.js";
 
 /** Convert a simple glob (supporting * and **) to an anchored RegExp over normalized paths.
- *  NOTE: exclude_paths patterns must use forward slashes (only the finding's file is normalized). */
+ *  NOTE: exclude_paths patterns must use forward slashes (only the finding's file is normalized).
+ *  A `**` segment matches ZERO OR MORE path segments (not one-or-more): a leading `**/` or
+ *  trailing `/**` therefore also matches the zero-directory case (e.g. `**\/x/**` matches the
+ *  repo-root path `x/y.ts`, not just `a/x/y.ts`). */
 export function globToRegExp(glob: string): RegExp {
   const esc = (s: string) => s.replace(/[.+^${}()|[\]\\]/g, "\\$&");
-  // ** = across path segments (.*) ; * = within a single segment ([^/]*)
-  const body = glob
-    .split("**")
-    .map((seg) => seg.split("*").map(esc).join("[^/]*"))
-    .join(".*");
+  // * within a single segment -> [^/]* ; segment literals escaped.
+  const translateSegment = (seg: string) => seg.split("*").map(esc).join("[^/]*");
+
+  const segments = glob.split("/");
+  let body = "";
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    const isFirst = i === 0;
+    const isLast = i === segments.length - 1;
+    if (seg === "**") {
+      if (isFirst && isLast) {
+        body += ".*"; // whole pattern is just "**"
+      } else if (isFirst) {
+        body += "(?:.*/)?"; // leading **/ -> zero or more leading dirs
+      } else {
+        body += "(?:/.*)?"; // trailing /** or middle /**/ -> zero or more dirs (incl. the slash)
+      }
+    } else {
+      const prevSeg = segments[i - 1];
+      // No literal "/" needed before this segment when the previous segment was "**":
+      // its (?:.*/)? / (?:/.*)? group already accounts for the separator.
+      if (!isFirst && prevSeg !== "**") body += "/";
+      body += translateSegment(seg);
+    }
+  }
   return new RegExp("^" + body + "$");
 }
 

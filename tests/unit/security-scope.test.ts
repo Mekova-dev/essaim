@@ -37,6 +37,19 @@ describe("globToRegExp", () => {
     expect(re.test("vendor/some lib/x.ts")).toBe(true);
     expect(re.test("vendor/other/x.ts")).toBe(false);
   });
+  it("leading **/ matches zero directories (repo-root)", () => {
+    const re = globToRegExp("**/*fixtures*/**");
+    expect(re.test("fixtures/sample.ts")).toBe(true); // zero leading dirs
+    expect(re.test("tests/__fixtures__/a.ts")).toBe(true);
+    expect(re.test("a/b/fixtures-x/c/d.ts")).toBe(true);
+    expect(re.test("src/app.ts")).toBe(false);
+  });
+  it("still preserves a literal space and single-segment *", () => {
+    expect(globToRegExp("vendor/some lib/**").test("vendor/some lib/x.ts")).toBe(true);
+    expect(globToRegExp("src/*.ts").test("src/a.ts")).toBe(true);
+    expect(globToRegExp("src/*.ts").test("src/sub/a.ts")).toBe(false);
+    expect(globToRegExp("node_modules/**").test("node_modules/a/b.ts")).toBe(true);
+  });
 });
 
 describe("resolveScope", () => {
