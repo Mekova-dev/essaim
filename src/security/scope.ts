@@ -7,7 +7,9 @@ import { normPath } from "./finding.js";
  *  NOTE: exclude_paths patterns must use forward slashes (only the finding's file is normalized).
  *  A `**` segment matches ZERO OR MORE path segments (not one-or-more): a leading `**/` or
  *  trailing `/**` therefore also matches the zero-directory case (e.g. `**\/x/**` matches the
- *  repo-root path `x/y.ts`, not just `a/x/y.ts`). */
+ *  repo-root path `x/y.ts`, not just `a/x/y.ts`). A MIDDLE `**` (e.g. `a/**\/b`) still requires
+ *  exactly one mandatory separator from the preceding literal — it must NOT become optional,
+ *  or `a/**\/b` would wrongly match `ab` (an in-scope path silently dropped as excluded). */
 export function globToRegExp(glob: string): RegExp {
   const esc = (s: string) => s.replace(/[.+^${}()|[\]\\]/g, "\\$&");
   // * within a single segment -> [^/]* ; segment literals escaped.
@@ -23,9 +25,16 @@ export function globToRegExp(glob: string): RegExp {
       if (isFirst && isLast) {
         body += ".*"; // whole pattern is just "**"
       } else if (isFirst) {
-        body += "(?:.*/)?"; // leading **/ -> zero or more leading dirs
+        body += "(?:.*/)?"; // leading **/ -> zero or more leading dirs (carries its own trailing slash)
+      } else if (isLast) {
+        body += "(?:/.*)?"; // trailing /** -> zero or more dirs (carries its own leading slash)
       } else {
-        body += "(?:/.*)?"; // trailing /** or middle /**/ -> zero or more dirs (incl. the slash)
+        // Middle /**/ between two literals: keep exactly ONE mandatory separator from the
+        // previous segment (do NOT let it become optional, or "a/**/b" would over-match "ab"),
+        // then zero-or-more dirs each terminated by "/" before the next segment.
+        const prevSeg = segments[i - 1];
+        if (prevSeg !== "**") body += "/";
+        body += "(?:.*/)?";
       }
     } else {
       const prevSeg = segments[i - 1];

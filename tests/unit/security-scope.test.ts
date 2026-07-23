@@ -50,6 +50,17 @@ describe("globToRegExp", () => {
     expect(globToRegExp("src/*.ts").test("src/sub/a.ts")).toBe(false);
     expect(globToRegExp("node_modules/**").test("node_modules/a/b.ts")).toBe(true);
   });
+  it("middle ** keeps a mandatory separator (does not glue literals)", () => {
+    const re = globToRegExp("a/**/b");
+    expect(re.test("a/b")).toBe(true);
+    expect(re.test("a/x/b")).toBe(true);
+    expect(re.test("a/x/y/b")).toBe(true);
+    expect(re.test("ab")).toBe(false); // must NOT over-match
+    const re2 = globToRegExp("src/**/gen.ts");
+    expect(re2.test("src/gen.ts")).toBe(true);
+    expect(re2.test("src/x/gen.ts")).toBe(true);
+    expect(re2.test("srcgen.ts")).toBe(false); // must NOT over-match
+  });
 });
 
 describe("resolveScope", () => {

@@ -24,9 +24,12 @@ export interface IngestResult {
   failed: number;
 }
 
-/** Sanitize an engine-derived metadata field (file path, category, cwe, ...) — untrusted, not fenced. */
+/** Sanitize an engine-derived metadata field (file path, category, cwe, ...) — untrusted, not fenced.
+ *  Unlike `sanitizeUntrusted` (which deliberately keeps \n/\t/\r for fenced blocks), these fields land
+ *  UNFENCED in single-line plan/subject/target_* fields — so CR/LF/TAB are collapsed to a single space
+ *  to prevent a newline from injecting fake lines above the "BEGIN UNTRUSTED" fence. */
 function safeMeta(value: unknown, maxLen: number): string {
-  return sanitizeUntrusted(String(value ?? ""), maxLen);
+  return sanitizeUntrusted(String(value ?? ""), maxLen).replace(/[\r\n\t]+/g, " ");
 }
 
 /** Sanitize + format an engine-derived file:line location. `line` is coerced defensively. */
