@@ -16,6 +16,7 @@ import { isHaltRequested, sweepOrphanContainers } from "./killswitch.js";
 import { normPath } from "./finding.js";
 import { authHeaders } from "../coordinator-auth.js";
 import { createLogger } from "../logger.js";
+import { PINNED_STRIX_IMAGE } from "./docker.js";
 
 const log = createLogger("security");
 
@@ -31,6 +32,13 @@ export interface PrePhaseResult {
   ledger: SecurityRunLedger;
   postedMap: { threadId: string; finding: Finding }[];
   engineId: EngineId;
+}
+
+/** Digest portion of an image ref (after `@sha256:`), or the full ref when unpinned/unparseable. */
+function imageDigestOf(image: string): string {
+  const marker = "@sha256:";
+  const idx = image.indexOf(marker);
+  return idx >= 0 ? image.slice(idx + marker.length) : image;
 }
 
 export function buildLedger(
@@ -53,9 +61,22 @@ export function buildLedger(
     exitCode: r?.exitCode,
     engineVersion: r?.engineVersion,
     license: "Apache-2.0",
+    imageDigest: imageDigestOf(PINNED_STRIX_IMAGE),
     outOfScopeDropped: extra.outOfScopeDropped,
     suppressed: extra.suppressed,
   };
+}
+
+/** Belt-and-suspenders on top of cli/security.ts's `isLoopback` flag check — the seed chokepoint
+ *  guards itself so an off-loopback `COORDINATOR_URL` env fallback (no `--coordinator-url` flag)
+ *  cannot seed findings into a non-essaim-managed coordinator (decision #3). */
+function isLoopbackUrl(u: string): boolean {
+  try {
+    const h = new URL(u).hostname;
+    return h === "localhost" || h === "127.0.0.1" || h === "::1";
+  } catch {
+    return false;
+  }
 }
 
 /** Assert the coordinator pool contains no foreign threads (belt-and-suspenders on top of reset-before-seed). */
@@ -136,6 +157,11 @@ export async function runSecurityPrePhase(
   if (fresh.suppressed > 0) log.info(`security: suppressed ${fresh.suppressed} baselined findings`);
 
   const authorId = syntheticAuthorId(p.projectPath);
+  if (!isLoopbackUrl(p.coordinatorUrl)) {
+    throw new Error(
+      "security: refusing to seed into a non-loopback coordinator (" + p.coordinatorUrl + ") — decision #3",
+    );
+  }
   await registerSyntheticAuthor(p.coordinatorUrl, authorId);
   await assertPoolClean(p.coordinatorUrl, authorId);
   const ingest = await ingestFindings(p.coordinatorUrl, authorId, fresh.fresh);
@@ -201,10 +227,18 @@ export async function runSecurityVerifyPhase(
   const registry = deps.registry ?? createDefaultRegistry({ runId: "verify", envFile });
   try {
     const details = await verifyFixes(registry, items, AbortSignal.timeout(params.scanTimeoutMs));
+    // Change B: buildVerifyItems silently OMITS a posted finding no worktree diff touched — it must
+    // not vanish from the tally. Any postedMap entry whose finding.fingerprint isn't among the
+    // verifyFixes results is conservatively counted as reopened (closure unproven).
+    const coveredFingerprints = new Set(details.map((d) => d.fingerprint));
+    const orphanDetails: VerifyResult[] = params.postedMap
+      .filter(({ finding }) => !coveredFingerprints.has(finding.fingerprint))
+      .map(({ threadId, finding }) => ({ threadId, fingerprint: finding.fingerprint, status: "reopened" as const }));
+    const allDetails = [...details, ...orphanDetails];
     return {
-      verified: details.filter((d) => d.status === "verified").length,
-      reopened: details.filter((d) => d.status === "reopened").length,
-      details,
+      verified: allDetails.filter((d) => d.status === "verified").length,
+      reopened: allDetails.filter((d) => d.status === "reopened").length,
+      details: allDetails,
     };
   } finally {
     removeEnvFile(envFile);
