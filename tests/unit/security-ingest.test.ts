@@ -36,6 +36,11 @@ describe("findingToAnnounce", () => {
     const p = findingToAnnounce(finding({ title: "x".repeat(500) }), "a");
     expect(p.subject.length).toBeLessThanOrEqual(200);
   });
+
+  it("redacts a secret-shaped substring in the title out of the subject", () => {
+    const p = findingToAnnounce(finding({ title: "leak sk-abcDEF0123456789ghijklmnop here" }), "a");
+    expect(p.subject).not.toContain("sk-abcDEF0123456789ghijklmnop");
+  });
 });
 
 describe("ingestFindings + registerSyntheticAuthor", () => {

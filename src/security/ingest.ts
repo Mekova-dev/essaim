@@ -3,7 +3,7 @@
 import { basename } from "node:path";
 import type { Finding } from "./types.js";
 import { toSubjectSeverity } from "./finding.js";
-import { sanitizeUntrusted, renderUntrustedBlock } from "./redact.js";
+import { sanitizeUntrusted, renderUntrustedBlock, redact } from "./redact.js";
 import { authHeaders } from "../coordinator-auth.js";
 import { createLogger } from "../logger.js";
 
@@ -42,7 +42,8 @@ export function renderPlan(f: Finding): string {
 
 export function findingToAnnounce(f: Finding, agentId: string): AnnouncePayload {
   const loc = f.file ? ` (${f.file}${f.line ? `:${f.line}` : ""})` : "";
-  const subject = `${toSubjectSeverity(f.severity)}: ${sanitizeUntrusted(f.title, 160)}${loc}`.slice(0, 200);
+  const safeTitle = sanitizeUntrusted(redact(f.title), 160);
+  const subject = `${toSubjectSeverity(f.severity)}: ${safeTitle}${loc}`.slice(0, 200);
   return {
     agent_id: agentId,
     subject,
