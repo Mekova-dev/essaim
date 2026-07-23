@@ -41,6 +41,14 @@ describe("sanitizeUntrusted", () => {
     expect(out.startsWith("xxxxxxxxxx")).toBe(true);
     expect(out).toContain("[truncated]");
   });
+
+  it("strips C1 control characters (incl. NEL 0x85) while keeping newline/tab/space", () => {
+    const c1a = String.fromCharCode(0x85); // NEL
+    const c1b = String.fromCharCode(0x90); // C1 control
+    const out = sanitizeUntrusted("a" + c1a + "b" + c1b + "c");
+    expect(out).toBe("abc");
+    expect(sanitizeUntrusted("x\ny\tz w")).toBe("x\ny\tz w");
+  });
 });
 
 describe("renderUntrustedBlock", () => {

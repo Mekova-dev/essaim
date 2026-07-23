@@ -41,6 +41,7 @@ export function sanitizeUntrusted(text: string, maxLen = 4000): string {
       const c = ch.charCodeAt(0);
       if (c === 0x09 || c === 0x0a || c === 0x0d) return true; // keep tab, newline, CR
       if (c === 0x7f) return false;                            // drop DEL
+      if (c >= 0x80 && c <= 0x9f) return false;                // drop C1 controls (incl. NEL 0x85)
       return c >= 0x20;                                        // keep printable+space, drop C0 controls
     })
     .join("");

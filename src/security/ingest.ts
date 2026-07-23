@@ -29,7 +29,17 @@ export interface IngestResult {
  *  UNFENCED in single-line plan/subject/target_* fields — so CR/LF/TAB are collapsed to a single space
  *  to prevent a newline from injecting fake lines above the "BEGIN UNTRUSTED" fence. */
 function safeMeta(value: unknown, maxLen: number): string {
-  return sanitizeUntrusted(String(value ?? ""), maxLen).replace(/[\r\n\t]+/g, " ");
+  const s = sanitizeUntrusted(String(value ?? ""), maxLen);
+  // Collapse every newline-class codepoint to a single space: TAB(0x09), LF(0x0A), CR(0x0D),
+  // NEL(0x85), LINE SEPARATOR(0x2028), PARAGRAPH SEPARATOR(0x2029). Pure numeric codepoint
+  // comparisons only -- no literal separator characters, no backslash-u escapes in source.
+  const NEWLINE_CLASS = new Set([0x09, 0x0a, 0x0d, 0x85, 0x2028, 0x2029]);
+  let out = "";
+  for (const ch of s) {
+    const c = ch.codePointAt(0) ?? 0;
+    out += NEWLINE_CLASS.has(c) ? " " : ch;
+  }
+  return out.replace(/ +/g, " ");
 }
 
 /** Sanitize + format an engine-derived file:line location. `line` is coerced defensively. */
