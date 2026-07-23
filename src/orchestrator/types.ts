@@ -1,5 +1,6 @@
 // src/types.ts
 import type { ChildProcess } from "child_process";
+import type { MiniProjectSecurity, SecurityRunLedger } from "../security/types.js";
 
 export interface AgentConfig {
   id: string;
@@ -49,6 +50,7 @@ export interface MiniProject {
   teardown?: string;
   metrics: string[];
   compare_mode?: boolean;
+  security?: MiniProjectSecurity; // set by `essaim security`; gates the orchestrator security steps
 }
 
 export interface AgentProcess {
@@ -87,6 +89,7 @@ export interface RunResult {
   agent_results: AgentResult[];
   custom_metrics: Record<string, unknown>;
   worktrees?: { agent_id: string; path: string; branch: string }[];
+  security?: SecurityRunLedger; // present only for security runs; rendered by the reporter
 }
 
 export interface AgentResult {

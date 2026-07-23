@@ -138,3 +138,31 @@ export interface AuthorizationResult {
   canProceed: boolean;
   reason?: string;
 }
+
+// ---- Run-time integration types (Plan 3) ----
+
+/** Attached to MiniProject.security to drive the orchestrator's security steps. */
+export interface MiniProjectSecurity {
+  config: SecurityConfig;
+  secretsFile?: string; // path to a 0600 dotenv file with LLM_API_KEY / STRIX_LLM
+  envAffirmed?: boolean; // ESSAIM_SECURITY_AFFIRMED=1 (CI static scans)
+}
+
+/** Summary of a security run, attached to RunResult.security and rendered by the reporter. */
+export interface SecurityRunLedger {
+  engine: EngineId;
+  status: EngineStatus;
+  findingsBySeverity: Record<Severity, number>;
+  ingested: number;
+  verified: number;
+  reopened: number;
+  falsePositives: number;
+  degraded: boolean;
+  durationMs: number;
+  exitCode?: number;
+  engineVersion?: string;
+  license: string;
+  imageDigest?: string;
+  outOfScopeDropped: number;
+  suppressed: number;
+}
