@@ -53,4 +53,23 @@ describe("createRegistry — license gate", () => {
     reg.register(fakeAdapter("strix", "MIT"));
     expect(() => reg.resolve(["strix", "pentagi"] as EngineId[])).toThrow();
   });
+
+  it("REFUSES confusable / near-miss license strings (exact match only)", () => {
+    const reg = createRegistry();
+    const refused = [
+      "MIT-0",                          // not MIT
+      "Apache-2.0-with-LLVM-exception", // not Apache-2.0
+      "AGPL-3.0-with-MIT-exception",    // copyleft with a misleading suffix
+      " MIT",                           // leading whitespace
+      "mit",                            // wrong case
+      "GPL-3.0",
+      "SSPL-1.0",
+    ];
+    for (const lic of refused) {
+      expect(
+        () => reg.register(fakeAdapter("x", lic)),
+        `license ${JSON.stringify(lic)} must be refused`
+      ).toThrow(EngineLicenseError);
+    }
+  });
 });
