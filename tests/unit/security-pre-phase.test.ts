@@ -95,7 +95,7 @@ describe("buildVerifyItems (git-diff mapping)", () => {
     ];
     const workspacePaths = new Map([["agentA", "/wt/a"], ["agentB", "/wt/b"]]);
     const diffFn = (worktree: string) => (worktree === "/wt/a" ? ["src/a.ts"] : ["src/b.ts"]);
-    const items = buildVerifyItems({ postedMap, workspacePaths, baseSha: "abc", engineId: "strix" }, { diffFn });
+    const items = buildVerifyItems({ postedMap, workspacePaths, baseSha: "abc", engineId: "strix", scanMode: "quick" }, { diffFn });
     expect(items).toHaveLength(2);
     expect(items.find((i) => i.finding.fingerprint === "fp1")?.worktreePath).toBe("/wt/a");
     expect(items.find((i) => i.finding.fingerprint === "fp2")?.worktreePath).toBe("/wt/b");
@@ -105,7 +105,7 @@ describe("buildVerifyItems (git-diff mapping)", () => {
     const postedMap = [{ threadId: "t-1", finding: finding("fp1", "src/a.ts") }];
     const workspacePaths = new Map([["agentA", "/wt/a"]]);
     const diffFn = () => ["src/other.ts"];
-    const items = buildVerifyItems({ postedMap, workspacePaths, baseSha: "abc", engineId: "strix" }, { diffFn });
+    const items = buildVerifyItems({ postedMap, workspacePaths, baseSha: "abc", engineId: "strix", scanMode: "quick" }, { diffFn });
     expect(items).toHaveLength(0);
   });
 });

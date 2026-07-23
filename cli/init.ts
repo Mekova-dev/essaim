@@ -15,7 +15,12 @@ export function createInitCommand(): Command {
       setupProject(projectPath, opts);
       if (opts.security) {
         // dynamic import keeps the security module out of the base init path
-        import("../src/security/setup.js").then(({ setupSecurity }) => setupSecurity(projectPath));
+        import("../src/security/setup.js")
+          .then(({ setupSecurity }) => setupSecurity(projectPath))
+          .catch((err) => {
+            console.error(`Security setup failed: ${err instanceof Error ? err.message : err}`);
+            process.exitCode = 1;
+          });
       }
     });
 }

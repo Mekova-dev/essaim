@@ -12,10 +12,13 @@ const ALLOW_EXACT = new Set([
   "DEBUG", "LOG_LEVEL", "NODE_ENV",
   // Proxy config — the claude child may need it to reach the Anthropic API on corp networks.
   "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy",
+  // TLS/Node runtime config — corp proxy CA trust, Node runtime flags, XDG dirs, custom module paths.
+  "NODE_EXTRA_CA_CERTS", "SSL_CERT_FILE", "SSL_CERT_DIR", "NODE_OPTIONS", "NODE_TLS_REJECT_UNAUTHORIZED",
+  "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME", "NODE_PATH",
 ]);
 
 // Prefix families that belong to claude / anthropic / essaim / the coordinator (not engines).
-const ALLOW_PREFIX = ["ANTHROPIC_", "CLAUDE_", "COORDINATOR_", "ESSAIM_", "AWS_"];
+const ALLOW_PREFIX = ["ANTHROPIC_", "CLAUDE_", "COORDINATOR_", "ESSAIM_", "AWS_", "NVM_", "FNM_", "VOLTA_", "ASDF_"];
 
 function isAllowed(key: string): boolean {
   if (ALLOW_EXACT.has(key)) return true;

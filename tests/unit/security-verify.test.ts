@@ -44,7 +44,7 @@ describe("verifyFixes", () => {
   it("marks a finding VERIFIED when the re-scan no longer detects its fingerprint", async () => {
     const reg = createRegistry();
     reg.register(rescanAdapter([])); // clean re-scan
-    const items: VerifyItem[] = [{ finding: finding("fp1"), worktreePath: "/wt/a", threadId: "t-1", engineId: "strix" }];
+    const items: VerifyItem[] = [{ finding: finding("fp1"), worktreePath: "/wt/a", threadId: "t-1", engineId: "strix", scanMode: "quick" }];
     const res = await verifyFixes(reg, items, new AbortController().signal, existsTrue);
     expect(res).toEqual([{ threadId: "t-1", fingerprint: "fp1", status: "verified" }]);
   });
@@ -52,7 +52,7 @@ describe("verifyFixes", () => {
   it("marks a finding REOPENED when the re-scan still detects its fingerprint", async () => {
     const reg = createRegistry();
     reg.register(rescanAdapter(["fp1"])); // still there
-    const items: VerifyItem[] = [{ finding: finding("fp1"), worktreePath: "/wt/a", threadId: "t-1", engineId: "strix" }];
+    const items: VerifyItem[] = [{ finding: finding("fp1"), worktreePath: "/wt/a", threadId: "t-1", engineId: "strix", scanMode: "quick" }];
     const res = await verifyFixes(reg, items, new AbortController().signal, existsTrue);
     expect(res[0].status).toBe("reopened");
   });
@@ -60,7 +60,7 @@ describe("verifyFixes", () => {
   it("marks REOPENED (conservative) when the worktree is gone (e.g. --cleanup)", async () => {
     const reg = createRegistry();
     reg.register(rescanAdapter([])); // even a clean adapter cannot save a missing worktree
-    const items: VerifyItem[] = [{ finding: finding("fp1"), worktreePath: "/gone", threadId: "t-1", engineId: "strix" }];
+    const items: VerifyItem[] = [{ finding: finding("fp1"), worktreePath: "/gone", threadId: "t-1", engineId: "strix", scanMode: "quick" }];
     const res = await verifyFixes(reg, items, new AbortController().signal, { existsFn: () => false });
     expect(res[0].status).toBe("reopened");
   });
@@ -68,7 +68,7 @@ describe("verifyFixes", () => {
   it("re-scan that DEGRADES (engine error) → reopened, not a false verified", async () => {
     const reg = createRegistry();
     reg.register(degradedAdapter()); // adapter run() returns status: "error", findings: []
-    const items: VerifyItem[] = [{ finding: finding("fp1"), worktreePath: "/wt/a", threadId: "t-1", engineId: "strix" }];
+    const items: VerifyItem[] = [{ finding: finding("fp1"), worktreePath: "/wt/a", threadId: "t-1", engineId: "strix", scanMode: "quick" }];
     const res = await verifyFixes(reg, items, new AbortController().signal, { existsFn: () => true });
     expect(res[0].status).toBe("reopened");
   });

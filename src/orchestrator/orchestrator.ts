@@ -472,6 +472,8 @@ async function _runProjectBody(
       baseSha: workspace.baseSha,
       engineId: securityEngineId,
       scanTimeoutMs: project.security.config.scanTimeoutMs,
+      secretsFile: project.security.secretsFile,
+      scanMode: project.security.config.scan_mode,
     });
     securityLedger = { ...securityLedger, verified: verify.verified, reopened: verify.reopened };
     log.info(`Security: ${verify.verified} verified, ${verify.reopened} reopened`);

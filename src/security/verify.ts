@@ -13,6 +13,7 @@ export interface VerifyItem {
   worktreePath: string; // the agent branch that should contain the fix
   threadId: string;
   engineId: EngineId;
+  scanMode: "quick" | "deep";
 }
 
 export interface VerifyResult {
@@ -35,7 +36,7 @@ export async function verifyFixes(
       out.push({ threadId: it.threadId, fingerprint: it.finding.fingerprint, status: "reopened" });
       continue;
     }
-    const scope: ResolvedScope = { targetPath: it.worktreePath, mode: "full", scanMode: "quick", excludeMatchers: [] };
+    const scope: ResolvedScope = { targetPath: it.worktreePath, mode: "full", scanMode: it.scanMode, excludeMatchers: [] };
     const scan = await runSecurityScan(registry, [it.engineId], scope, signal);
     if (scan.degraded) {
       // re-scan failed/degraded → cannot prove closure → conservative reopened (anti-false-clean)

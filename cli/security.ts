@@ -1,7 +1,7 @@
 // cli/security.ts — `essaim security`: scan → seed coordinator → swarm fixes → verify → report.
 import { Command } from "commander";
 import { resolve, join } from "node:path";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { loadSecurityConfig, SECURITY_CONFIG_REL } from "../src/security/config.js";
 import type { MiniProjectSecurity, SecurityRunLedger, EngineId, SecurityScopeConfig, SecurityConfig } from "../src/security/types.js";
 import { executeRun } from "./run-core.js";
@@ -36,7 +36,7 @@ function isLoopback(url: string): boolean {
 function defaultIsTracked(projectPath: string): (path: string) => boolean {
   return (path) => {
     try {
-      execSync(`git ls-files --error-unmatch "${path}"`, { cwd: projectPath, stdio: "ignore" });
+      execFileSync("git", ["ls-files", "--error-unmatch", path], { cwd: projectPath, stdio: "ignore" });
       return true;
     } catch {
       return false;

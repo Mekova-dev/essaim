@@ -13,6 +13,8 @@ describe("buildChildEnv — allowlist (drops engine secrets)", () => {
     DEBUG: "1",
     HTTPS_PROXY: "http://proxy:8080",
     ProgramFiles: "C:\\Program Files",
+    NODE_EXTRA_CA_CERTS: "/etc/ssl/corp-ca.pem",
+    NVM_DIR: "/home/u/.nvm",
     // must be DROPPED:
     LLM_API_KEY: "sk-engine-secret",
     STRIX_LLM: "anthropic/claude",
@@ -33,6 +35,8 @@ describe("buildChildEnv — allowlist (drops engine secrets)", () => {
     expect(env.DEBUG).toBe("1");
     expect(env.HTTPS_PROXY).toBe("http://proxy:8080"); // proxy passes (corp networks)
     expect(env.ProgramFiles).toBe("C:\\Program Files"); // Windows essential passes
+    expect(env.NODE_EXTRA_CA_CERTS).toBe("/etc/ssl/corp-ca.pem"); // corp proxy CA trust passes
+    expect(env.NVM_DIR).toBe("/home/u/.nvm"); // version-manager var passes
   });
 
   it("DROPS engine secrets and arbitrary *_API_KEY / *_TOKEN", () => {

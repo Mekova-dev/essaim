@@ -158,7 +158,7 @@ function gitDiffNames(worktree: string, base: string): string[] {
 
 /** Map each posted finding to the worktree whose diff touched its file (deterministic, no coordinator). */
 export function buildVerifyItems(
-  params: { postedMap: { threadId: string; finding: Finding }[]; workspacePaths: Map<string, string>; baseSha?: string; engineId: EngineId },
+  params: { postedMap: { threadId: string; finding: Finding }[]; workspacePaths: Map<string, string>; baseSha?: string; engineId: EngineId; scanMode: "quick" | "deep" },
   deps: { diffFn?: (worktree: string, base: string) => string[] } = {},
 ): VerifyItem[] {
   const diffFn = deps.diffFn ?? gitDiffNames;
@@ -174,7 +174,7 @@ export function buildVerifyItems(
     const target = normPath(finding.file);
     for (const [wt, files] of changed) {
       if (files.has(target)) {
-        items.push({ finding, worktreePath: wt, threadId, engineId: params.engineId });
+        items.push({ finding, worktreePath: wt, threadId, engineId: params.engineId, scanMode: params.scanMode });
         break;
       }
     }
@@ -184,15 +184,29 @@ export function buildVerifyItems(
 
 /** Step 6: build verify items from worktree diffs, re-scan, tally. Report-only. */
 export async function runSecurityVerifyPhase(
-  params: { postedMap: { threadId: string; finding: Finding }[]; workspacePaths: Map<string, string>; baseSha?: string; engineId: EngineId; scanTimeoutMs: number },
+  params: {
+    postedMap: { threadId: string; finding: Finding }[];
+    workspacePaths: Map<string, string>;
+    baseSha?: string;
+    engineId: EngineId;
+    scanTimeoutMs: number;
+    secretsFile?: string;
+    scanMode: "quick" | "deep";
+  },
   deps: { registry?: AdapterRegistry; diffFn?: (worktree: string, base: string) => string[] } = {},
 ): Promise<{ verified: number; reopened: number; details: VerifyResult[] }> {
   const items = buildVerifyItems(params, { diffFn: deps.diffFn });
-  const registry = deps.registry ?? createDefaultRegistry({ runId: "verify" });
-  const details = await verifyFixes(registry, items, AbortSignal.timeout(params.scanTimeoutMs));
-  return {
-    verified: details.filter((d) => d.status === "verified").length,
-    reopened: details.filter((d) => d.status === "reopened").length,
-    details,
-  };
+  const secrets = resolveEngineSecrets(params.secretsFile);
+  const envFile = writeEnvFile(secrets);
+  const registry = deps.registry ?? createDefaultRegistry({ runId: "verify", envFile });
+  try {
+    const details = await verifyFixes(registry, items, AbortSignal.timeout(params.scanTimeoutMs));
+    return {
+      verified: details.filter((d) => d.status === "verified").length,
+      reopened: details.filter((d) => d.status === "reopened").length,
+      details,
+    };
+  } finally {
+    removeEnvFile(envFile);
+  }
 }
