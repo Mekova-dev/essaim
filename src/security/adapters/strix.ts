@@ -28,7 +28,8 @@ export interface StrixAdapterDeps {
 }
 
 function excerpt(s: string, n = 2000): string {
-  return redact(s.length > n ? s.slice(0, n) + "…[truncated]" : s);
+  const r = redact(s); // redact the FULL string first, then truncate the masked result
+  return r.length > n ? r.slice(0, n) + "…[truncated]" : r;
 }
 
 export function createStrixAdapter(deps: StrixAdapterDeps): EngineAdapter {

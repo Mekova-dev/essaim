@@ -68,6 +68,13 @@ describe("StrixAdapter.run — exit-code mapping", () => {
     expect(res.status).toBe("error");
   });
 
+  it("exit 2 but a clean-parsed empty findings array → error (never a false no_vulns)", async () => {
+    // strix-clean.stdout.txt parses to {"findings": []}; paired with exit 2 this must be an error, not no_vulns.
+    const a = createStrixAdapter({ runId: "r1", spawnFn: scriptedSpawn(fx("strix-clean.stdout.txt"), 2) });
+    const res = await a.run(scope, new AbortController().signal);
+    expect(res.status).toBe("error");
+  });
+
   it("stdoutExcerpt is redacted", async () => {
     const a = createStrixAdapter({ runId: "r1", spawnFn: scriptedSpawn(fx("strix-vulns.stdout.txt"), 2) });
     const res = await a.run(scope, new AbortController().signal);
