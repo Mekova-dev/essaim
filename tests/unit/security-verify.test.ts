@@ -24,6 +24,20 @@ function rescanAdapter(returnFingerprints: string[]): EngineAdapter {
   };
 }
 
+// Adapter whose re-scan errors out (degraded) — must NOT be trusted to prove closure.
+function degradedAdapter(): EngineAdapter {
+  return {
+    capabilities: { id: "strix", displayName: "s", modes: ["sast"], requiresRunningTarget: false, supportsDiffScope: true, transport: "process", license: "Apache-2.0" },
+    async healthCheck() { return { ok: true, detail: "" }; },
+    async run() {
+      return {
+        engine: "strix" as EngineId, status: "error",
+        findings: [], startedAt: "t", finishedAt: "t", durationMs: 1,
+      };
+    },
+  };
+}
+
 describe("verifyFixes", () => {
   const existsTrue = { existsFn: () => true };
 
@@ -48,6 +62,14 @@ describe("verifyFixes", () => {
     reg.register(rescanAdapter([])); // even a clean adapter cannot save a missing worktree
     const items: VerifyItem[] = [{ finding: finding("fp1"), worktreePath: "/gone", threadId: "t-1", engineId: "strix" }];
     const res = await verifyFixes(reg, items, new AbortController().signal, { existsFn: () => false });
+    expect(res[0].status).toBe("reopened");
+  });
+
+  it("re-scan that DEGRADES (engine error) → reopened, not a false verified", async () => {
+    const reg = createRegistry();
+    reg.register(degradedAdapter()); // adapter run() returns status: "error", findings: []
+    const items: VerifyItem[] = [{ finding: finding("fp1"), worktreePath: "/wt/a", threadId: "t-1", engineId: "strix" }];
+    const res = await verifyFixes(reg, items, new AbortController().signal, { existsFn: () => true });
     expect(res[0].status).toBe("reopened");
   });
 });

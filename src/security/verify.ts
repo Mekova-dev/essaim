@@ -37,6 +37,11 @@ export async function verifyFixes(
     }
     const scope: ResolvedScope = { targetPath: it.worktreePath, mode: "full", scanMode: "quick", excludeMatchers: [] };
     const scan = await runSecurityScan(registry, [it.engineId], scope, signal);
+    if (scan.degraded) {
+      // re-scan failed/degraded → cannot prove closure → conservative reopened (anti-false-clean)
+      out.push({ threadId: it.threadId, fingerprint: it.finding.fingerprint, status: "reopened" });
+      continue;
+    }
     const stillThere = scan.findings.some((f) => f.fingerprint === it.finding.fingerprint);
     out.push({ threadId: it.threadId, fingerprint: it.finding.fingerprint, status: stillThere ? "reopened" : "verified" });
   }
