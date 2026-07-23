@@ -45,6 +45,18 @@ describe("loadBaseline", () => {
     writeFileSync(baselinePath(dir), JSON.stringify({ version: 2 }));
     expect(() => loadBaseline(dir)).toThrow(SecurityConfigError);
   });
+
+  it("throws SecurityConfigError on a JSON syntax error", () => {
+    mkdirSync(join(dir, ".essaim", "security"), { recursive: true });
+    writeFileSync(baselinePath(dir), "{ not valid json");
+    expect(() => loadBaseline(dir)).toThrow(SecurityConfigError);
+  });
+
+  it("throws SecurityConfigError on a literal null file", () => {
+    mkdirSync(join(dir, ".essaim", "security"), { recursive: true });
+    writeFileSync(baselinePath(dir), "null");
+    expect(() => loadBaseline(dir)).toThrow(SecurityConfigError);
+  });
 });
 
 describe("applyBaseline", () => {
@@ -65,12 +77,14 @@ describe("applyBaseline", () => {
 
 describe("writeBaseline + upsertBaselineEntry", () => {
   it("creates the directory and round-trips", () => {
-    let bl = loadBaseline(dir);
-    bl = upsertBaselineEntry(bl, "newfp", { status: "false_positive", reason: "x", by: "j", at: "2026-07-22" });
-    writeBaseline(dir, bl);
+    const before = loadBaseline(dir);
+    const after = upsertBaselineEntry(before, "newfp", { status: "false_positive", reason: "x", by: "j", at: "2026-07-22" });
+    writeBaseline(dir, after);
     expect(existsSync(baselinePath(dir))).toBe(true);
     expect(loadBaseline(dir).entries.newfp.status).toBe("false_positive");
     // human-readable (pretty-printed)
     expect(readFileSync(baselinePath(dir), "utf8")).toContain("\n  ");
+    // original baseline was not mutated
+    expect(before.entries.newfp).toBeUndefined();
   });
 });

@@ -21,8 +21,11 @@ export function loadBaseline(projectPath: string): BaselineFile {
   } catch {
     throw new SecurityConfigError(`baseline.json is not valid JSON: ${p}`);
   }
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new SecurityConfigError(`baseline.json must be an object { version: 1, entries: {} }: ${p}`);
+  }
   const b = raw as Partial<BaselineFile>;
-  if (b.version !== 1 || typeof b.entries !== "object" || b.entries === null) {
+  if (b.version !== 1 || typeof b.entries !== "object" || b.entries === null || Array.isArray(b.entries)) {
     throw new SecurityConfigError(`baseline.json must be { version: 1, entries: {} }: ${p}`);
   }
   return b as BaselineFile;
