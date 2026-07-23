@@ -24,6 +24,7 @@ import { fetchCoordinatorMetrics } from "./metrics.js";
 import { collectAgentResults } from "./reporter.js";
 import type { AgentConfig, MiniProject, AgentProcess, RunResult } from "./types.js";
 import { scanProject } from "./scanner.js";
+import { runSecurityPrePhase, runSecurityVerifyPhase } from "../security/pre-phase.js";
 
 import { getCatalogRoots, getScriptsDirs } from "../../cli/bce-resolver.js";
 import { runPipeline } from "@swoofer/promptweave";
@@ -198,6 +199,36 @@ async function _runProjectBody(
     log.info("Running setup script...");
     const scriptPath = path.resolve(__dirname, "..", project.setup);
     execSync(`bash "${scriptPath}"`, { cwd: basePath, stdio: "inherit" });
+  }
+
+  // 3.5 Security pre-phase (deterministic): scan → normalize → ingest as coordinator threads.
+  // Guarded: dead code unless `project.security` is set on a coordinated run.
+  let securityLedger: import("../security/types.js").SecurityRunLedger | undefined;
+  let securityPosted: { threadId: string; finding: import("../security/types.js").Finding }[] = [];
+  let securityEngineId: import("../security/types.js").EngineId | undefined;
+  let securityBaseSha: string | undefined;
+  if (project.security && mode === "with_coordinator") {
+    log.info("Security pre-phase: scanning + seeding coordinator...");
+    // REQUIRED: resolve the base commit NOW (before createWorkspaces). With default config
+    // (scope.mode=diff, diff_base=""), resolveScope needs a base or it throws — so compute it here.
+    try {
+      securityBaseSha = execSync(`git rev-parse ${project.workspace.baseRef || "HEAD"}`, { cwd: basePath, encoding: "utf-8" }).trim();
+    } catch {
+      securityBaseSha = undefined; // non-git repo: diff-scope will refuse loudly in resolveScope
+    }
+    const pre = await runSecurityPrePhase({
+      coordinatorUrl: effectiveCoordinatorUrl,
+      runId,
+      projectPath: basePath,
+      baseSha: securityBaseSha,
+      security: project.security,
+    });
+    securityLedger = pre.ledger;
+    securityPosted = pre.postedMap;
+    securityEngineId = pre.engineId;
+    if (pre.postedMap.length === 0 && project.security.config.requireFindings) {
+      throw new Error("Security scan produced 0 ingestable findings — aborting before swarm launch");
+    }
   }
 
   // 4. Create worktrees (now includes setup changes like injected bugs)
@@ -432,6 +463,20 @@ async function _runProjectBody(
     }
   }
 
+  // 6.5 Security verify phase (deterministic, report-only): re-scan fixed worktrees.
+  if (project.security && mode === "with_coordinator" && securityLedger && securityEngineId) {
+    log.info("Security verify phase: re-scanning fixed worktrees...");
+    const verify = await runSecurityVerifyPhase({
+      postedMap: securityPosted,
+      workspacePaths: workspace.paths,
+      baseSha: workspace.baseSha,
+      engineId: securityEngineId,
+      scanTimeoutMs: project.security.config.scanTimeoutMs,
+    });
+    securityLedger = { ...securityLedger, verified: verify.verified, reopened: verify.reopened };
+    log.info(`Security: ${verify.verified} verified, ${verify.reopened} reopened`);
+  }
+
   // 7. Cleanup or keep worktrees
   if (cleanup) {
     cleanupWorkspaces(workspace);
@@ -466,6 +511,7 @@ async function _runProjectBody(
     agent_results: agentResults,
     custom_metrics: {},
     worktrees,
+    security: securityLedger,
   };
 }
 
