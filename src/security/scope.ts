@@ -15,7 +15,9 @@ export function globToRegExp(glob: string): RegExp {
   // * within a single segment -> [^/]* ; segment literals escaped.
   const translateSegment = (seg: string) => seg.split("*").map(esc).join("[^/]*");
 
-  const segments = glob.split("/");
+  // Collapse consecutive "**" segments to a single "**" before translating — e.g. "dist/**/**"
+  // must behave exactly like "dist/**", not compile into a degenerate match-nothing regex.
+  const segments = glob.split("/").filter((seg, i, arr) => !(seg === "**" && arr[i - 1] === "**"));
   let body = "";
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i];

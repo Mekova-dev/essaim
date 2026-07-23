@@ -61,6 +61,15 @@ describe("globToRegExp", () => {
     expect(re2.test("src/x/gen.ts")).toBe(true);
     expect(re2.test("srcgen.ts")).toBe(false); // must NOT over-match
   });
+  it("collapses adjacent ** segments instead of producing a degenerate match-nothing regex", () => {
+    const distDouble = globToRegExp("dist/**/**");
+    const distSingle = globToRegExp("dist/**");
+    expect(distDouble.test("dist/a/b.ts")).toBe(true);
+    expect(distDouble.test("dist")).toBe(distSingle.test("dist"));
+    expect(distDouble.test("dist")).toBe(true);
+    // middle-** fix must remain intact after collapsing adjacent globstars elsewhere
+    expect(globToRegExp("a/**/b").test("ab")).toBe(false);
+  });
 });
 
 describe("resolveScope", () => {

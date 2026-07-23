@@ -62,7 +62,7 @@ export function renderPlan(f: Finding): string {
 
 export function findingToAnnounce(f: Finding, agentId: string): AnnouncePayload {
   const loc = safeLocation(f);
-  const safeTitle = sanitizeUntrusted(redact(f.title), 160);
+  const safeTitle = safeMeta(redact(f.title), 160);
   const subject = `${toSubjectSeverity(f.severity)}: ${safeTitle}${loc ? ` (${loc})` : ""}`.slice(0, 200);
   return {
     agent_id: agentId,
