@@ -32,6 +32,11 @@ describe("globToRegExp", () => {
     expect(globToRegExp("src/*.ts").test("src/a.ts")).toBe(true);
     expect(globToRegExp("src/*.ts").test("src/sub/a.ts")).toBe(false);
   });
+  it("preserves a literal space in a pattern (does not widen it to .*)", () => {
+    const re = globToRegExp("vendor/some lib/**");
+    expect(re.test("vendor/some lib/x.ts")).toBe(true);
+    expect(re.test("vendor/other/x.ts")).toBe(false);
+  });
 });
 
 describe("resolveScope", () => {

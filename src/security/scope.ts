@@ -3,13 +3,15 @@ import type { Finding, ResolvedScope, SecurityConfig } from "./types.js";
 import { SecurityConfigError } from "./errors.js";
 import { normPath } from "./finding.js";
 
-/** Convert a simple glob (supporting * and **) to an anchored RegExp over normalized paths. */
+/** Convert a simple glob (supporting * and **) to an anchored RegExp over normalized paths.
+ *  NOTE: exclude_paths patterns must use forward slashes (only the finding's file is normalized). */
 export function globToRegExp(glob: string): RegExp {
-  const escaped = glob.replace(/[.+^${}()|[\]\\]/g, "\\$&");
-  const body = escaped
-    .replace(/\*\*/g, " ") // placeholder for **
-    .replace(/\*/g, "[^/]*") // * = within a segment
-    .replace(/ /g, ".*"); // ** = across segments
+  const esc = (s: string) => s.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+  // ** = across path segments (.*) ; * = within a single segment ([^/]*)
+  const body = glob
+    .split("**")
+    .map((seg) => seg.split("*").map(esc).join("[^/]*"))
+    .join(".*");
   return new RegExp("^" + body + "$");
 }
 
@@ -18,7 +20,7 @@ export function resolveScope(cfg: SecurityConfig, ctx: { repoPath: string; baseS
   const mode = cfg.scope.mode;
   let diffBase: string | undefined;
   if (mode === "diff") {
-    diffBase = (cfg.scope.diff_base?.trim() || ctx.baseSha) ?? undefined;
+    diffBase = cfg.scope.diff_base?.trim() || ctx.baseSha;
     if (!diffBase) {
       throw new SecurityConfigError(
         "scope.mode=diff but no diff_base configured and no worktree baseSha resolved — refusing to silently widen scope to full tree",
